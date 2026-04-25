@@ -16,7 +16,7 @@
 import type { JinaResult } from './types'
 
 const JINA_BASE = 'https://r.jina.ai/'
-const FETCH_TIMEOUT_MS = 12_000 // r.jina.ai's headless browser can be slow on first fetch
+const FETCH_TIMEOUT_MS = 30_000 // r.jina.ai's headless browser cold-starts can take 15-25s on first fetch of an unfamiliar site (e.g. CNN); 12s was too tight and surfaced as "timeouts" in real-world use
 
 // Optional API key — set via the phone-side settings page. When present,
 // sent as Authorization: Bearer header so r.jina.ai bumps us out of the
