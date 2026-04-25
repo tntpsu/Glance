@@ -2,14 +2,17 @@
 // are namespaced "reader:" so a future plugin in the same Even Hub install
 // can't accidentally collide.
 
-export type AdapterKind = 'jina' | 'espn-news' | 'inbox'
+export type AdapterKind = 'jina' | 'espn-news' | 'inbox' | 'worker'
 
 export interface Source {
   id: string // UUID
-  url: string // homepage URL for jina; "espn-news://<league>" for espn-news; "inbox://saved" for inbox
+  url: string // homepage URL for jina/worker; "espn-news://<league>"; "inbox://saved"
   title: string // user-supplied display name — e.g. "ESPN"
   adapter?: AdapterKind // defaults to 'jina' when absent
-  adapterConfig?: { league?: string } // espn-news: e.g. "football/nfl"
+  // Per-adapter config grab-bag:
+  // - espn-news: { league: 'football/nfl' }
+  // - worker: { workerUrl: 'https://x.workers.dev', bearerToken: '...' }
+  adapterConfig?: { league?: string; workerUrl?: string; bearerToken?: string }
   lastFetchedAt?: number
 }
 

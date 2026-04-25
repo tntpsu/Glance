@@ -18,6 +18,15 @@ import type { JinaResult } from './types'
 const JINA_BASE = 'https://r.jina.ai/'
 const FETCH_TIMEOUT_MS = 12_000 // r.jina.ai's headless browser can be slow on first fetch
 
+// Optional API key — set via the phone-side settings page. When present,
+// sent as Authorization: Bearer header so r.jina.ai bumps us out of the
+// free 200/day per IP per domain rate limit. Synchronous read at call
+// time means changing the key in settings takes effect on next fetch.
+let cachedJinaApiKey: string | null = null
+export function setJinaApiKeyCache(key: string | null): void {
+  cachedJinaApiKey = key && key.trim() ? key.trim() : null
+}
+
 export class JinaError extends Error {
   constructor(
     message: string,
@@ -87,8 +96,10 @@ export async function fetchViaJina(url: string): Promise<JinaResult> {
   const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   const target = JINA_BASE + url
   try {
+    const headers: Record<string, string> = { Accept: 'text/plain' }
+    if (cachedJinaApiKey) headers.Authorization = `Bearer ${cachedJinaApiKey}`
     const resp = await fetch(target, {
-      headers: { Accept: 'text/plain' },
+      headers,
       signal: controller.signal,
     })
     if (!resp.ok) {

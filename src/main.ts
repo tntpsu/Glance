@@ -6,17 +6,22 @@
 // putting glasses on). The glasses-side display is driven via the
 // EvenRuntime returned from connectEvenRuntime.
 
+import { ESPN_LEAGUES } from './adapters/espn'
 import { addInboxItem, setInboxBridge } from './adapters/inbox'
 import { getAdapter } from './adapters/index'
 import { connectEvenRuntime, type EvenRuntime, type InputSource } from './even'
-import { JinaError } from './jina'
+import { JinaError, setJinaApiKeyCache } from './jina'
 import { paginate } from './paginate'
 import { DEFAULT_SOURCES, looksLikeUrl, makeSource } from './sources'
 import {
   getCachedBody,
+  getJinaApiKey,
+  loadReadUrls,
   loadState,
+  markRead,
   putCachedBody,
   saveState,
+  setJinaApiKey,
   setStorageBridge,
 } from './storage'
 import type { Article, ReaderState, Source } from './types'
@@ -46,6 +51,10 @@ let articleCursor = 0
 // Sliding-window size for both list views — fits the right-column with
 // header + cursor + 5 visible items + hint footer comfortably.
 const VISIBLE_ROWS = 5
+
+// Set of article URLs the user has read to completion. Hydrated on
+// boot, mutated as we mark articles read; persists via storage.markRead.
+let readUrls: Set<string> = new Set()
 
 // --- DOM scaffold (phone-side settings UI) ---
 
@@ -81,7 +90,7 @@ root.innerHTML = `
       <ul id="sources-list" style="list-style: none; padding: 0; margin: 0 0 1rem 0;"></ul>
 
       <details style="margin-bottom: 1rem;">
-        <summary style="cursor: pointer; color: #232323;">Add a source</summary>
+        <summary style="cursor: pointer; color: #232323;">Add a generic source (any homepage URL)</summary>
         <form id="add-source-form" style="margin-top: .5rem; display: grid; gap: .25rem; max-width: 480px;">
           <label>Title <input id="src-title" type="text" required style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
           <label>URL <input id="src-url" type="url" required placeholder="https://example.com" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
@@ -90,7 +99,60 @@ root.innerHTML = `
         </form>
       </details>
 
+      <details style="margin-bottom: 1rem;">
+        <summary style="cursor: pointer; color: #232323;">Add an ESPN league source (uses ESPN's news API)</summary>
+        <form id="add-espn-form" style="margin-top: .5rem; display: grid; gap: .25rem; max-width: 480px;">
+          <label>League
+            <select id="espn-league" style="padding: .35rem; width: 100%; box-sizing: border-box;">
+              ${ESPN_LEAGUES.map(l => `<option value="${l.slug}">${escapeHtml(l.label)}</option>`).join('')}
+            </select>
+          </label>
+          <button type="submit" style="margin-top: .25rem; padding: .4rem .8rem; cursor: pointer; max-width: 200px;">Add ESPN source</button>
+          <p id="add-espn-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
+        </form>
+      </details>
+
+      <details style="margin-bottom: 1rem;">
+        <summary style="cursor: pointer; color: #232323;">Add a worker source (auth-walled sites)</summary>
+        <p style="color: #7b7b7b; margin: .5rem 0; font-size: .85em;">
+          For sites that need login (Rivals, NYT-with-account, paid forums).
+          Deploy the Cloudflare Worker template at
+          <code>worker-template/</code> in this repo first, then paste the
+          Worker URL + bearer token here. Full setup steps in
+          <code>worker-template/README.md</code>.
+        </p>
+        <form id="add-worker-form" style="margin-top: .5rem; display: grid; gap: .25rem; max-width: 480px;">
+          <label>Title <input id="worker-title" type="text" required placeholder="BWI Rivals" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
+          <label>Site homepage URL <input id="worker-site-url" type="url" required placeholder="https://bwi.rivals.com" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
+          <label>Worker URL <input id="worker-url" type="url" required placeholder="https://glance-reader.your-sub.workers.dev" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
+          <label>Bearer token <input id="worker-token" type="password" required placeholder="(your SHARED_SECRET)" style="padding: .35rem; width: 100%; box-sizing: border-box; font-family: monospace;" /></label>
+          <button type="submit" style="margin-top: .25rem; padding: .4rem .8rem; cursor: pointer; max-width: 220px;">Add worker source</button>
+          <p id="add-worker-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
+        </form>
+      </details>
+
       <button id="reset-defaults" style="padding: .35rem .7rem; cursor: pointer; font-size: .85em; color: #7b7b7b;">Reset to default sources</button>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <details>
+        <summary style="cursor: pointer; color: #7b7b7b;">Advanced — Jina API key (optional)</summary>
+        <p style="color: #7b7b7b; margin: .5rem 0; font-size: .85em;">
+          Glance uses the free public r.jina.ai service to extract article text.
+          The free tier is rate-limited per IP per domain (you'll see "Rate-limited
+          by Jina" errors when over the cap). A paid Jina API key bypasses the
+          limit. Get one at <a href="https://jina.ai/reader/" target="_blank" rel="noopener">jina.ai/reader</a>.
+          Stored locally on this device only — never sent anywhere except r.jina.ai.
+        </p>
+        <form id="jina-key-form" style="display: grid; gap: .25rem; max-width: 480px;">
+          <label>API key <input id="jina-key-input" type="password" placeholder="jina_xxxxxxxxxxxx" style="padding: .35rem; width: 100%; box-sizing: border-box; font-family: monospace;" /></label>
+          <div style="display: flex; gap: .5rem; margin-top: .25rem;">
+            <button type="submit" style="padding: .35rem .7rem; cursor: pointer;">Save</button>
+            <button type="button" id="jina-key-clear" style="padding: .35rem .7rem; cursor: pointer; background: #eee;">Clear</button>
+          </div>
+          <p id="jina-key-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
+        </form>
+      </details>
     </section>
 
     <section style="margin-top: 2rem; color: #7b7b7b; font-size: .85em;">
@@ -174,6 +236,88 @@ resetBtn.addEventListener('click', async () => {
   renderSourcesList()
 })
 
+// --- ESPN league source add ---
+
+const espnForm = document.querySelector<HTMLFormElement>('#add-espn-form')!
+const espnLeagueSelect = document.querySelector<HTMLSelectElement>('#espn-league')!
+const espnStatus = document.querySelector<HTMLParagraphElement>('#add-espn-status')!
+
+espnForm.addEventListener('submit', async e => {
+  e.preventDefault()
+  const slug = espnLeagueSelect.value
+  const league = ESPN_LEAGUES.find(l => l.slug === slug)
+  if (!league) return
+  // Avoid duplicates — ESPN sources are uniquely identified by their slug.
+  const existing = state.sources.find(
+    s => s.adapter === 'espn-news' && s.adapterConfig?.league === slug,
+  )
+  if (existing) {
+    espnStatus.style.color = '#c00'
+    espnStatus.textContent = `${league.label} is already in your sources.`
+    return
+  }
+  state.sources.push({
+    id: `src_${Date.now()}_espn_${slug.replace(/\W+/g, '_')}`,
+    title: `ESPN — ${league.label}`,
+    url: `espn-news://${slug}`,
+    adapter: 'espn-news',
+    adapterConfig: { league: slug },
+  })
+  await saveState(state)
+  renderSourcesList()
+  espnStatus.style.color = '#2a2'
+  espnStatus.textContent = `Added ESPN — ${league.label}.`
+  window.setTimeout(() => { espnStatus.textContent = '' }, 3000)
+})
+
+// --- Worker source add ---
+
+const workerForm = document.querySelector<HTMLFormElement>('#add-worker-form')!
+const workerTitleInput = document.querySelector<HTMLInputElement>('#worker-title')!
+const workerSiteUrlInput = document.querySelector<HTMLInputElement>('#worker-site-url')!
+const workerUrlInput = document.querySelector<HTMLInputElement>('#worker-url')!
+const workerTokenInput = document.querySelector<HTMLInputElement>('#worker-token')!
+const workerStatus = document.querySelector<HTMLParagraphElement>('#add-worker-status')!
+
+workerForm.addEventListener('submit', async e => {
+  e.preventDefault()
+  const title = workerTitleInput.value.trim()
+  const siteUrl = workerSiteUrlInput.value.trim()
+  const workerUrl = workerUrlInput.value.trim()
+  const token = workerTokenInput.value.trim()
+  if (!title) {
+    workerStatus.style.color = '#c00'
+    workerStatus.textContent = 'Title required.'
+    return
+  }
+  if (!looksLikeUrl(siteUrl) || !looksLikeUrl(workerUrl)) {
+    workerStatus.style.color = '#c00'
+    workerStatus.textContent = 'Site URL and Worker URL must both be valid http(s) URLs.'
+    return
+  }
+  if (!token) {
+    workerStatus.style.color = '#c00'
+    workerStatus.textContent = 'Bearer token required.'
+    return
+  }
+  state.sources.push({
+    id: `src_${Date.now()}_worker`,
+    title,
+    url: siteUrl,
+    adapter: 'worker',
+    adapterConfig: { workerUrl, bearerToken: token },
+  })
+  await saveState(state)
+  renderSourcesList()
+  workerTitleInput.value = ''
+  workerSiteUrlInput.value = ''
+  workerUrlInput.value = ''
+  workerTokenInput.value = ''
+  workerStatus.style.color = '#2a2'
+  workerStatus.textContent = `Added "${title}" via worker.`
+  window.setTimeout(() => { workerStatus.textContent = '' }, 3000)
+})
+
 // --- inbox add form ---
 
 const inboxForm = document.querySelector<HTMLFormElement>('#add-inbox-form')!
@@ -202,6 +346,110 @@ async function addInboxFromForm(url: string, title: string): Promise<void> {
 inboxForm.addEventListener('submit', e => {
   e.preventDefault()
   void addInboxFromForm(inboxUrlInput.value.trim(), inboxTitleInput.value.trim())
+})
+
+// --- Jina API key form ---
+
+const jinaKeyForm = document.querySelector<HTMLFormElement>('#jina-key-form')!
+const jinaKeyInput = document.querySelector<HTMLInputElement>('#jina-key-input')!
+const jinaKeyClear = document.querySelector<HTMLButtonElement>('#jina-key-clear')!
+const jinaKeyStatus = document.querySelector<HTMLParagraphElement>('#jina-key-status')!
+
+jinaKeyForm.addEventListener('submit', async e => {
+  e.preventDefault()
+  const k = jinaKeyInput.value.trim()
+  await setJinaApiKey(k)
+  setJinaApiKeyCache(k || null)
+  jinaKeyStatus.style.color = '#2a2'
+  jinaKeyStatus.textContent = k ? 'Saved. Higher rate limit active.' : 'Cleared.'
+  window.setTimeout(() => { jinaKeyStatus.textContent = '' }, 3000)
+})
+
+// --- clipboard auto-detect on focus ---
+//
+// Standard share-sheet flow: user copies a URL anywhere on their phone
+// (Safari, Twitter, mail link, anywhere) → opens the Even Hub companion app
+// → opens Glance. We detect a URL on the clipboard and offer one-tap save.
+// Honors a "GLANCE:" prefix from the optional iOS Shortcut (see README) so
+// the prompt only appears for URLs deliberately sent to Glance, not every
+// random URL the user has copied.
+//
+// State: track the last URL we offered so we don't re-prompt on every focus
+// event for the same one (window.focus fires often during normal use).
+let lastOfferedClipboardUrl: string | null = null
+
+async function checkClipboardForSavedUrl(): Promise<void> {
+  if (!navigator.clipboard?.readText) return
+  let raw: string
+  try {
+    raw = await navigator.clipboard.readText()
+  } catch {
+    // Clipboard permission denied (Safari prompts on first read; if user
+    // declines, fail silent — the manual paste form still works).
+    return
+  }
+  if (!raw) return
+  // Accept either bare URL or "GLANCE:<url>" / "glance:<url>" prefix.
+  const stripped = raw.replace(/^glance:\s*/i, '').trim()
+  if (!looksLikeUrl(stripped)) return
+  if (stripped === lastOfferedClipboardUrl) return // already prompted
+  lastOfferedClipboardUrl = stripped
+  // Use a custom non-blocking banner instead of confirm() so the user
+  // can keep using the page if they don't want to add right now.
+  showClipboardBanner(stripped)
+}
+
+function showClipboardBanner(url: string): void {
+  // Remove any prior banner.
+  document.getElementById('clipboard-banner')?.remove()
+  const banner = document.createElement('div')
+  banner.id = 'clipboard-banner'
+  banner.style.cssText =
+    'position: sticky; top: 0; padding: .75rem 1rem; background: #fef991; color: #232323; border-bottom: 1px solid #e5e08a; display: flex; align-items: center; gap: .75rem; font-size: .9em; z-index: 10;'
+  const truncated = url.length > 60 ? `${url.slice(0, 60)}…` : url
+  banner.innerHTML = `
+    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+      <strong>URL on clipboard:</strong> ${escapeHtml(truncated)}
+    </span>
+    <button id="clipboard-banner-add" style="padding: .35rem .7rem; cursor: pointer; border: 1px solid #232323; background: #232323; color: #fff;">Save to inbox</button>
+    <button id="clipboard-banner-dismiss" style="padding: .35rem .7rem; cursor: pointer; border: 1px solid #999; background: transparent; color: #232323;">Dismiss</button>
+  `
+  document.body.prepend(banner)
+  document.getElementById('clipboard-banner-add')!.addEventListener('click', async () => {
+    const item = await addInboxItem(url)
+    inboxStatus.style.color = '#2a2'
+    inboxStatus.textContent = `Saved: ${item.title.slice(0, 60)}`
+    banner.remove()
+  })
+  document.getElementById('clipboard-banner-dismiss')!.addEventListener('click', () => {
+    banner.remove()
+  })
+}
+
+window.addEventListener('focus', () => {
+  // Best-effort. Clipboard read can require user gesture on first call;
+  // we still try because once the user has clicked anywhere on the page
+  // it usually works.
+  void checkClipboardForSavedUrl()
+})
+// Also try once on first interaction — gives Safari its required user
+// gesture and surfaces any clipboard URL the moment the user touches the
+// page.
+document.addEventListener(
+  'click',
+  () => {
+    void checkClipboardForSavedUrl()
+  },
+  { once: true },
+)
+
+jinaKeyClear.addEventListener('click', async () => {
+  jinaKeyInput.value = ''
+  await setJinaApiKey(null)
+  setJinaApiKeyCache(null)
+  jinaKeyStatus.style.color = '#7b7b7b'
+  jinaKeyStatus.textContent = 'Cleared. Back to free tier.'
+  window.setTimeout(() => { jinaKeyStatus.textContent = '' }, 3000)
 })
 
 pasteBtn.addEventListener('click', async () => {
@@ -307,7 +555,10 @@ function renderArticlesView(loading: boolean, error?: string): string {
   for (let i = start; i < end; i += 1) {
     const a = currentArticles[i]!
     const cursor = i === articleCursor ? '> ' : '  '
-    lines.push(`${cursor}${trunc(a.title, 32)}`)
+    // Compact "✓" prefix for already-read articles. Helps the user skip
+    // past finished items without re-tapping into them.
+    const readMark = readUrls.has(a.url) ? '✓ ' : ''
+    lines.push(`${cursor}${readMark}${trunc(a.title, 30)}`)
   }
   if (total > VISIBLE_ROWS) {
     lines.push('')
@@ -527,6 +778,18 @@ async function flipPage(delta: number): Promise<void> {
     }
     await saveState(state)
   }
+  // Mark as read when the user reaches the LAST page — proxy for "they
+  // finished reading it." Multi-page articles only; single-page reads
+  // are too easy to land on accidentally.
+  if (
+    currentArticle &&
+    currentPages.length > 1 &&
+    currentPageIndex === currentPages.length - 1 &&
+    !readUrls.has(currentArticle.url)
+  ) {
+    readUrls.add(currentArticle.url)
+    void markRead(currentArticle.url)
+  }
   await paint()
 }
 
@@ -600,6 +863,17 @@ async function bootstrap(): Promise<void> {
     setStorageBridge(bridge)
     setInboxBridge(bridge)
   }
+
+  // Hydrate Jina API key (if previously set) into the runtime cache so
+  // fetchViaJina sees it on first call. Also seed the settings input.
+  const savedJinaKey = await getJinaApiKey()
+  if (savedJinaKey) {
+    setJinaApiKeyCache(savedJinaKey)
+    jinaKeyInput.value = savedJinaKey
+  }
+
+  // Hydrate the read-state set so the article list shows ✓ markers.
+  readUrls = await loadReadUrls()
 
   // Load persisted state, seed defaults on first launch.
   state = await loadState()

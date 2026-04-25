@@ -6,6 +6,7 @@ import type { AdapterKind, Article, Source } from '../types'
 import { jinaAdapter } from './jina'
 import { espnAdapter } from './espn'
 import { inboxAdapter } from './inbox'
+import { workerAdapter } from './worker'
 
 export interface ArticleBody {
   title: string
@@ -26,6 +27,7 @@ const REGISTRY: Record<AdapterKind, Adapter> = {
   jina: jinaAdapter,
   'espn-news': espnAdapter,
   inbox: inboxAdapter,
+  worker: workerAdapter,
 }
 
 export function getAdapter(source: Source): Adapter {

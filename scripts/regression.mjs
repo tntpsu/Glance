@@ -158,10 +158,14 @@ async function main() {
     check('tap advances page in reader', p2.message.includes('page=2/'), p2.message)
     await screenshot('06-reader-page-2')
 
-    console.log('6. Flip forward another page')
-    await input('click')
-    const p3 = await waitForState(m => m.includes('reader page=3/'), { label: 'reader page 3' })
-    check('repeated tap continues advancing', p3.message.includes('page=3/'), p3.message)
+    if (totalPages > 2) {
+      console.log('6. Flip forward another page')
+      await input('click')
+      const p3 = await waitForState(m => m.includes('reader page=3/'), { label: 'reader page 3' })
+      check('repeated tap continues advancing', p3.message.includes('page=3/'), p3.message)
+    } else {
+      console.log('6. Article is only 2 pages — skipping page-3 check')
+    }
   } else {
     console.log('5. Article is single-page — skipping page-flip checks')
   }

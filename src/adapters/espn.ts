@@ -15,6 +15,23 @@ import type { Article, Source } from '../types'
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/'
 const FETCH_TIMEOUT_MS = 8_000
 
+// Curated ESPN leagues — surfaced in the phone-side source editor as a
+// dropdown. Slug must match ESPN's API path under /apis/site/v2/sports/.
+export const ESPN_LEAGUES: Array<{ slug: string; label: string }> = [
+  { slug: 'football/nfl', label: 'NFL' },
+  { slug: 'basketball/nba', label: 'NBA' },
+  { slug: 'hockey/nhl', label: 'NHL' },
+  { slug: 'baseball/mlb', label: 'MLB' },
+  { slug: 'football/college-football', label: 'College Football' },
+  { slug: 'basketball/mens-college-basketball', label: 'Men\'s College Basketball' },
+  { slug: 'basketball/womens-college-basketball', label: 'Women\'s College Basketball' },
+  { slug: 'soccer/eng.1', label: 'Premier League' },
+  { slug: 'soccer/usa.1', label: 'MLS' },
+  { slug: 'racing/f1', label: 'Formula 1' },
+  { slug: 'tennis/atp', label: 'Tennis (ATP)' },
+  { slug: 'golf/pga', label: 'PGA Tour' },
+]
+
 interface EspnApiResponse {
   articles?: Array<{
     headline?: string

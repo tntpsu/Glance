@@ -49,6 +49,13 @@ const KEY_BODY_PREFIX = 'reader:body:'
 // Index of cached article URLs, newest-first. Trimmed to BODY_CACHE_CAP on
 // every write so we don't grow unbounded.
 const KEY_BODY_INDEX = 'reader:bodyIndex:v1'
+// Optional Jina API key — when set, sent as Authorization: Bearer header
+// to bump rate limits past the free 200/day per IP per domain.
+const KEY_JINA_API_KEY = 'reader:jinaApiKey:v1'
+// Set of article URLs the user has finished reading. Trimmed to a hard
+// cap (most-recent-N) so it doesn't grow unbounded.
+const KEY_READ_URLS = 'reader:readUrls:v1'
+const READ_URL_CAP = 500
 
 const BODY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 const BODY_CACHE_CAP = 100
@@ -77,6 +84,64 @@ export async function setResume(resume: ReaderState['resume']): Promise<void> {
   const state = await loadState()
   state.resume = resume
   await saveState(state)
+}
+
+// --- Jina API key (optional) ---
+
+export async function getJinaApiKey(): Promise<string | null> {
+  const raw = await readRaw(KEY_JINA_API_KEY)
+  const trimmed = (raw ?? '').trim()
+  return trimmed ? trimmed : null
+}
+
+export async function setJinaApiKey(key: string | null): Promise<void> {
+  await writeRaw(KEY_JINA_API_KEY, (key ?? '').trim())
+}
+
+// --- Read-state ---
+//
+// Stored as a compact array of URLs (most-recent first) rather than a Set
+// so JSON serialization is straightforward and we can LRU-evict cleanly.
+
+export async function loadReadUrls(): Promise<Set<string>> {
+  const raw = await readRaw(KEY_READ_URLS)
+  if (!raw) return new Set()
+  try {
+    const arr = JSON.parse(raw) as string[]
+    return Array.isArray(arr) ? new Set(arr) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+export async function markRead(url: string): Promise<void> {
+  if (!url) return
+  const raw = await readRaw(KEY_READ_URLS)
+  let arr: string[] = []
+  try {
+    arr = raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    arr = []
+  }
+  // Move-to-front semantics so the most-recently-read survives eviction.
+  arr = [url, ...arr.filter(u => u !== url)]
+  if (arr.length > READ_URL_CAP) arr.length = READ_URL_CAP
+  await writeRaw(KEY_READ_URLS, JSON.stringify(arr))
+}
+
+export async function unmarkRead(url: string): Promise<void> {
+  if (!url) return
+  const raw = await readRaw(KEY_READ_URLS)
+  if (!raw) return
+  try {
+    const arr = JSON.parse(raw) as string[]
+    if (!Array.isArray(arr)) return
+    const filtered = arr.filter(u => u !== url)
+    if (filtered.length === arr.length) return
+    await writeRaw(KEY_READ_URLS, JSON.stringify(filtered))
+  } catch {
+    /* swallow */
+  }
 }
 
 // --- article body cache ---
