@@ -384,6 +384,18 @@ async function paint(loading = false, error?: string): Promise<void> {
   if (view === 'sources') text = renderSourcesView()
   else if (view === 'articles') text = renderArticlesView(loading, error)
   else text = renderReaderView(loading, error)
+  // Structured console signal for the regression-test harness. Lets the
+  // simulator-automation script verify state transitions deterministically
+  // without doing OCR on screenshots.
+  const tag = loading ? `${view}:loading` : error ? `${view}:error` : view
+  const detail =
+    view === 'sources'
+      ? `cursor=${sourceCursor}/${state.sources.length}`
+      : view === 'articles'
+        ? `cursor=${articleCursor}/${currentArticles.length} src=${currentSource?.id ?? '?'}`
+        : `page=${currentPageIndex + 1}/${currentPages.length}`
+  // eslint-disable-next-line no-console
+  console.log(`[glance:state] ${tag} ${detail}`)
   await even.render(text)
 }
 

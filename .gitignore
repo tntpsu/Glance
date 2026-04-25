@@ -15,6 +15,9 @@ dist-ssr
 # Even Hub package output
 *.ehpk
 
+# Regression test screenshots — regenerated each run via npm run test:e2e
+tests/screenshots-regression/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
