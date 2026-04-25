@@ -1,0 +1,23 @@
+{
+  "name": "glance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "qr": "evenhub qr",
+    "pack": "evenhub pack app.json dist -o glance.ehpk",
+    "deploy": "npm run build && npm run pack && echo '\\nglance.ehpk ready: '$(pwd)'/glance.ehpk\\nUpload to https://hub.evenrealities.com/application'"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "^0.1.13",
+    "@evenrealities/evenhub-simulator": "^0.7.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.10"
+  }
+}
