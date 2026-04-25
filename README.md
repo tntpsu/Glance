@@ -1,6 +1,10 @@
 # Glance
 
+> **Read the web. No phone.**
+
 Read articles from your saved websites on Even Realities G2 smart glasses, hands-free.
+
+App icon: `assets/icon.svg` (master) and `assets/icon.png` (1024×1024 export). Brand yellow #FEF991 on Even-dark-theme background, three reading lines + glasses silhouette.
 
 Three-layer navigation: pick a saved site → see its current article list → tap a headline to read the body, paginated. Most extraction happens via [`r.jina.ai`](https://jina.ai/reader/) (free public URL-to-markdown service). Adapter pattern lets specific sites use better paths — ESPN uses its public news API to bypass the bot wall.
 

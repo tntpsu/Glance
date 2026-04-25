@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Glance app icon
+    1024x1024 master · iOS-style rounded square (rx=180)
+    Brand yellow (#FEF991) on Even-dark-theme background (#1A1A1A).
+
+    Top half: three horizontal reading lines (paragraph text shape).
+    Bottom half: clean glasses silhouette, lenses sized so they don't
+    crowd the bridge. Together = "articles, on glasses".
+  -->
+  <title>Glance</title>
+  <desc>Read the web. No phone.</desc>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="180" ry="180" fill="#1A1A1A"/>
+
+  <!-- Reading lines (top half), decreasing width like paragraph text -->
+  <g stroke="#FEF991" stroke-width="48" stroke-linecap="round">
+    <line x1="232" y1="316" x2="792" y2="316"/>
+    <line x1="232" y1="424" x2="664" y2="424"/>
+    <line x1="232" y1="532" x2="528" y2="532"/>
+  </g>
+
+  <!-- Glasses silhouette (bottom third) -->
+  <g fill="none" stroke="#FEF991" stroke-width="32" stroke-linecap="round">
+    <!-- Left lens -->
+    <circle cx="356" cy="780" r="116"/>
+    <!-- Right lens -->
+    <circle cx="668" cy="780" r="116"/>
+    <!-- Bridge -->
+    <line x1="472" y1="780" x2="552" y2="780"/>
+  </g>
+</svg>
