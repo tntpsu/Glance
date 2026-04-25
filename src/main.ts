@@ -8,7 +8,7 @@
 
 import { connectEvenRuntime, type EvenRuntime, type InputSource } from './even'
 import { extractArticles } from './extract'
-import { fetchViaJina, JinaError } from './jina'
+import { classifyBody, fetchViaJina, JinaError } from './jina'
 import { paginate } from './paginate'
 import { DEFAULT_SOURCES, looksLikeUrl, makeSource } from './sources'
 import {
@@ -362,6 +362,21 @@ async function openArticle(article: Article): Promise<void> {
       })
     }
     currentArticle = { url: article.url, title }
+    // Classify before pagination so we can show a meaningful error
+    // instead of a single empty page.
+    const classification = classifyBody(body)
+    if (!classification.ok) {
+      const reasonText =
+        classification.reason === 'paywall'
+          ? 'This article appears to be behind a paywall. Open it in your browser to read the full text.'
+          : classification.reason === 'bot-wall'
+            ? 'This site blocks automated access. Try a different source.'
+            : 'Article body looks empty — extraction may have failed.'
+      currentPages = paginate(reasonText)
+      currentPageIndex = 0
+      await paint()
+      return
+    }
     currentPages = paginate(body)
     currentPageIndex = 0
     await paint()

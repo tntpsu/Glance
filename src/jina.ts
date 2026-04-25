@@ -46,6 +46,42 @@ function parseJinaResponse(text: string, requestedUrl: string): JinaResult {
   }
 }
 
+// Heuristic paywall / bot-wall detection. r.jina.ai's headless Chromium
+// is unauthed, so paywalled articles return their teaser + "subscribe"
+// nag, and Cloudflare-protected sites return a JS challenge page. Both
+// look like very short bodies with telltale phrases.
+const PAYWALL_PATTERNS = [
+  /subscribe to continue/i,
+  /this article is for subscribers/i,
+  /subscribers? only/i,
+  /sign in to (?:continue|read)/i,
+  /create a free account/i,
+  /already a subscriber/i,
+  /unlock (?:this|the) (?:story|article)/i,
+  /(?:javascript|js) is (?:disabled|required)/i,
+  /verify (?:that )?you'?re not a (?:robot|bot)/i,
+  /cloudflare/i,
+]
+
+export interface BodyClassification {
+  ok: boolean
+  reason?: 'too-short' | 'paywall' | 'bot-wall'
+}
+
+export function classifyBody(markdown: string): BodyClassification {
+  const trimmed = markdown.trim()
+  if (trimmed.length < 200) return { ok: false, reason: 'too-short' }
+  // Check the first 600 chars — paywall nags appear at the top after the
+  // teaser; bot-wall messages dominate the whole short body.
+  const top = trimmed.slice(0, 600)
+  for (const re of PAYWALL_PATTERNS) {
+    if (re.test(top)) {
+      return { ok: false, reason: /robot|cloudflare|javascript/i.test(re.source) ? 'bot-wall' : 'paywall' }
+    }
+  }
+  return { ok: true }
+}
+
 export async function fetchViaJina(url: string): Promise<JinaResult> {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
