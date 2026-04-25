@@ -37,7 +37,15 @@ let currentArticle: Article | null = null
 let currentPages: string[] = []
 let currentPageIndex = 0
 
-let pickerOpen = false
+// Cursor positions for the swipe-driven list views. Tap opens whatever
+// the cursor is on. Tracking these separately from "current" state means
+// scrolling and committing are decoupled cleanly.
+let sourceCursor = 0
+let articleCursor = 0
+
+// Sliding-window size for both list views — fits the right-column with
+// header + cursor + 5 visible items + hint footer comfortably.
+const VISIBLE_ROWS = 5
 
 // --- DOM scaffold (phone-side settings UI) ---
 
@@ -228,6 +236,20 @@ function trunc(s: string, n: number): string {
   return s.length > n ? `${s.slice(0, n - 1)}…` : s
 }
 
+// Sliding-window list rendering. Returns the slice of items the cursor
+// should be visible within, so we always show context above + below.
+function windowForCursor(total: number, cursor: number, size: number): { start: number; end: number } {
+  if (total <= size) return { start: 0, end: total }
+  const half = Math.floor(size / 2)
+  let start = Math.max(0, cursor - half)
+  let end = start + size
+  if (end > total) {
+    end = total
+    start = total - size
+  }
+  return { start, end }
+}
+
 function renderSourcesView(): string {
   if (state.sources.length === 0) {
     return [
@@ -239,55 +261,82 @@ function renderSourcesView(): string {
       'the glasses.',
     ].join('\n')
   }
-  const lines: string[] = [`GLANCE  v${__APP_VERSION__}`, '']
-  state.sources.forEach((s, i) => {
-    const cursor = i === currentSourceIndex() ? '> ' : '  '
+  const lines: string[] = [`GLANCE  v${__APP_VERSION__}`]
+  const { start, end } = windowForCursor(state.sources.length, sourceCursor, VISIBLE_ROWS)
+  for (let i = start; i < end; i += 1) {
+    const s = state.sources[i]!
+    const cursor = i === sourceCursor ? '> ' : '  '
     lines.push(`${cursor}${trunc(s.title, 26)}`)
-  })
-  lines.push('')
-  lines.push('[tap] open · [2x] exit')
+  }
+  // Position indicator if windowed.
+  if (state.sources.length > VISIBLE_ROWS) {
+    lines.push('')
+    lines.push(`${sourceCursor + 1}/${state.sources.length} · [swipe] scroll`)
+  } else {
+    lines.push('')
+    lines.push('[swipe] scroll · [tap] open')
+  }
   return lines.join('\n')
-}
-
-function currentSourceIndex(): number {
-  if (!currentSource) return 0
-  const idx = state.sources.findIndex(s => s.id === currentSource!.id)
-  return idx >= 0 ? idx : 0
 }
 
 function renderArticlesView(loading: boolean, error?: string): string {
   if (!currentSource) return 'No source selected.'
-  const lines: string[] = [`${currentSource.title.toUpperCase()}`, '']
+  const lines: string[] = [`${trunc(currentSource.title, 30).toUpperCase()}`]
   if (loading) {
+    lines.push('')
     lines.push('Fetching articles…')
     return lines.join('\n')
   }
   if (error) {
-    lines.push(`Error: ${trunc(error, 60)}`)
+    const friendly = friendlyError(error)
+    lines.push('')
+    lines.push(friendly)
     lines.push('')
     lines.push('[2x] back to sources')
     return lines.join('\n')
   }
   if (currentArticles.length === 0) {
+    lines.push('')
     lines.push('No articles found.')
     lines.push('')
     lines.push('[2x] back to sources')
     return lines.join('\n')
   }
-  const max = Math.min(currentArticles.length, 6)
-  for (let i = 0; i < max; i += 1) {
+  const total = currentArticles.length
+  const { start, end } = windowForCursor(total, articleCursor, VISIBLE_ROWS)
+  for (let i = start; i < end; i += 1) {
     const a = currentArticles[i]!
-    const idx = i + 1
-    lines.push(`${idx}. ${trunc(a.title, 36)}`)
+    const cursor = i === articleCursor ? '> ' : '  '
+    lines.push(`${cursor}${trunc(a.title, 32)}`)
   }
-  if (currentArticles.length > max) {
+  if (total > VISIBLE_ROWS) {
     lines.push('')
-    lines.push(`+${currentArticles.length - max} more — [tap] picker`)
+    lines.push(`${articleCursor + 1}/${total} · [swipe] · [tap] read`)
   } else {
     lines.push('')
-    lines.push('[tap] open article')
+    lines.push('[swipe] · [tap] read · [2x] back')
   }
   return lines.join('\n')
+}
+
+// Map raw network/extraction errors into user-friendly one-liners.
+function friendlyError(raw: string): string {
+  if (/451/.test(raw) || /SecurityCompromiseError/i.test(raw)) {
+    return 'Rate-limited by Jina — try again in a few hours.'
+  }
+  if (/HTTP\s*4\d\d/i.test(raw)) {
+    return 'Site refused the request. Try again or pick another source.'
+  }
+  if (/HTTP\s*5\d\d/i.test(raw) || /ESPN API HTTP/i.test(raw)) {
+    return 'Source is having trouble. Try again later.'
+  }
+  if (/timed out|AbortError|aborted/i.test(raw)) {
+    return 'Connection timed out. Network may be slow.'
+  }
+  if (/Failed to fetch|NetworkError|load failed/i.test(raw)) {
+    return 'Network unreachable. Check Wi-Fi / Tailscale.'
+  }
+  return `Error: ${trunc(raw, 56)}`
 }
 
 function renderReaderView(loading: boolean, error?: string): string {
@@ -340,26 +389,11 @@ async function paint(loading = false, error?: string): Promise<void> {
 
 // --- navigation ---
 
-async function openSourcePicker(): Promise<void> {
-  if (!even || pickerOpen) return
-  if (state.sources.length === 0) return
-  pickerOpen = true
-  try {
-    const labels = state.sources.map(s => trunc(s.title, 28))
-    const picked = await even.openPicker('Sources', labels)
-    if (picked === null) return
-    const source = state.sources[picked]
-    if (!source) return
-    await openSource(source)
-  } finally {
-    pickerOpen = false
-  }
-}
-
 async function openSource(source: Source): Promise<void> {
   currentSource = source
   view = 'articles'
   currentArticles = []
+  articleCursor = 0
   await paint(true)
 
   // Inbox is always re-read from storage (cheap) so newly-added articles
@@ -389,22 +423,6 @@ async function openSource(source: Source): Promise<void> {
   } catch (err) {
     const message = err instanceof JinaError ? err.message : err instanceof Error ? err.message : String(err)
     await paint(false, message)
-  }
-}
-
-async function openArticlePicker(): Promise<void> {
-  if (!even || pickerOpen) return
-  if (currentArticles.length === 0) return
-  pickerOpen = true
-  try {
-    const labels = currentArticles.slice(0, 30).map((a, i) => `${i + 1}. ${trunc(a.title, 38)}`)
-    const picked = await even.openPicker(currentSource?.title ?? 'Articles', labels)
-    if (picked === null) return
-    const article = currentArticles[picked]
-    if (!article) return
-    await openArticle(article)
-  } finally {
-    pickerOpen = false
   }
 }
 
@@ -476,6 +494,7 @@ async function goBack(): Promise<void> {
     view = 'sources'
     currentSource = null
     currentArticles = []
+    articleCursor = 0
     state.resume = undefined
     await saveState(state)
     await paint()
@@ -503,11 +522,15 @@ async function flipPage(delta: number): Promise<void> {
 
 function onTap(_source: InputSource): void {
   if (view === 'sources') {
-    void openSourcePicker()
+    if (state.sources.length === 0) return
+    const source = state.sources[sourceCursor]
+    if (source) void openSource(source)
     return
   }
   if (view === 'articles') {
-    void openArticlePicker()
+    if (currentArticles.length === 0) return
+    const article = currentArticles[articleCursor]
+    if (article) void openArticle(article)
     return
   }
   // Reader: tap acts as "next page" — same as swipe down.
@@ -519,13 +542,23 @@ function onSwipe(dir: 'up' | 'down'): void {
     void flipPage(dir === 'down' ? +1 : -1)
     return
   }
-  if (view === 'articles' && currentArticles.length > 6) {
-    // No paging in the static dashboard view, but tapping the picker
-    // gives full access. Treat swipe as picker-shortcut.
-    void openArticlePicker()
+  // Swipe-down moves the cursor forward (down the list); swipe-up moves
+  // it backward. Wraps around at the ends because lists can be long.
+  const delta = dir === 'down' ? +1 : -1
+  if (view === 'sources') {
+    const total = state.sources.length
+    if (total === 0) return
+    sourceCursor = (sourceCursor + delta + total) % total
+    void paint()
     return
   }
-  // Sources view: nothing to scroll yet (everything fits).
+  if (view === 'articles') {
+    const total = currentArticles.length
+    if (total === 0) return
+    articleCursor = (articleCursor + delta + total) % total
+    void paint()
+    return
+  }
 }
 
 function onDoubleTap(_source: InputSource): void {
@@ -561,6 +594,31 @@ async function bootstrap(): Promise<void> {
   if (state.sources.length === 0) {
     state.sources = [...DEFAULT_SOURCES]
     await saveState(state)
+  } else {
+    // Migration for installs that predate adapter sources (v0.1.0 → v0.2.0+).
+    // - Always ensure exactly one inbox source exists at position 0
+    // - If a generic ESPN source exists (jina adapter, espn.com URL), upgrade it
+    //   in-place to the espn-news adapter so it actually fetches articles
+    let dirty = false
+    const hasInbox = state.sources.some(s => s.adapter === 'inbox')
+    if (!hasInbox) {
+      const inbox = DEFAULT_SOURCES.find(s => s.adapter === 'inbox')
+      if (inbox) {
+        state.sources.unshift({ ...inbox, id: `${inbox.id}_migrated` })
+        dirty = true
+      }
+    }
+    for (const s of state.sources) {
+      const hostMatch = /^https?:\/\/(www\.)?espn\.com/.test(s.url) && !s.adapter
+      if (hostMatch) {
+        s.adapter = 'espn-news'
+        s.adapterConfig = { league: 'football/nfl' }
+        s.url = 'espn-news://football/nfl'
+        s.title = s.title.toLowerCase().includes('espn') ? s.title : `${s.title} (NFL)`
+        dirty = true
+      }
+    }
+    if (dirty) await saveState(state)
   }
   renderSourcesList()
 
