@@ -1,0 +1,12 @@
+Title: An Important Story Behind a Paywall
+
+URL Source: https://example.com/news/important-story
+
+Markdown Content:
+# An Important Story Behind a Paywall
+
+The first sentence of the teaser is here. It hooks you with the news but stops just before the actual content begins.
+
+## Subscribe to continue reading
+
+This article is for subscribers only. Sign in to continue, or create a free account to read 3 articles per month. Already a subscriber?

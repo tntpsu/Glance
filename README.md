@@ -2,9 +2,9 @@
 
 Read articles from your saved websites on Even Realities G2 smart glasses, hands-free.
 
-Three-layer navigation: pick a saved site → see its current article list → tap a headline to read the body, paginated. All extraction happens via [`r.jina.ai`](https://jina.ai/reader/) — a free public service that turns any URL into clean markdown via headless Chromium. No backend infrastructure required.
+Three-layer navigation: pick a saved site → see its current article list → tap a headline to read the body, paginated. Most extraction happens via [`r.jina.ai`](https://jina.ai/reader/) (free public URL-to-markdown service). Adapter pattern lets specific sites use better paths — ESPN uses its public news API to bypass the bot wall.
 
-## Status: v0.1.0 (initial sideload-able build)
+## Status: v0.2.0 (Vitest tests, ESPN adapter, Inbox)
 
 The full app is built. Sideload to your glasses to test:
 
@@ -18,11 +18,14 @@ Upload at `https://hub.evenrealities.com/application` to your `com.philtullai.gl
 
 When you open Glance on the glasses you're at the **Sources** view — a list of your saved websites. Default sources baked in on first launch:
 
-- Hacker News (`news.ycombinator.com`)
-- CNN (`cnn.com`)
-- Yahoo News (`news.yahoo.com`)
-- BBC News (`bbc.com/news`)
-- Yahoo Sports (`sports.yahoo.com`)
+| Source | Adapter | Notes |
+|---|---|---|
+| ★ Saved articles | `inbox` | Holds URLs you save manually from the phone-side UI (paste / share-sheet workflow) |
+| Hacker News | `jina` | Aggregator — articles point to external sites |
+| CNN | `jina` | |
+| ESPN — NFL | `espn-news` | Uses ESPN's public news API directly to bypass r.jina.ai bot-wall. League is configurable per source |
+| BBC News | `jina` | |
+| Yahoo News | `jina` | (`news.yahoo.com` works; bare `yahoo.com` is blocked by Jina) |
 
 Tap a source → app fetches that homepage via r.jina.ai, parses the markdown for article-shaped links (filters nav/footer/asset cruft), and shows you the article picker.
 
@@ -46,11 +49,27 @@ Swipe down / single-tap = next page. Swipe up = previous page. Double-tap = back
 
 When you tap the Glance tile in the Even Hub companion app **before** putting on the glasses, you see the settings page:
 
-- Add a source (title + URL)
-- Remove existing sources (× button)
-- Reset to default sources
+**Save an article (Inbox):**
+- Paste an article URL into the form, optionally with a title, and tap "Save to inbox" — appears under "★ Saved articles" on the glasses immediately
+- Tap "Paste from clipboard" to grab whatever URL you just copied (e.g. from Safari's share sheet → "Copy")
+- Inbox holds up to 100 articles, oldest evicted
 
-Sources persist across launches via the SDK's native `setLocalStorage`.
+**Manage sources:**
+- Add a source (title + homepage URL — uses the jina adapter automatically)
+- Remove existing sources (× button)
+- Reset to default sources (replaces with the curated 6)
+
+Sources and inbox both persist across launches via the SDK's native `setLocalStorage`.
+
+## Adapters
+
+Glance has three:
+
+- **`jina`** (default) — fetches the homepage via r.jina.ai, extracts article-shaped links from the markdown. Works for most static + JS-rendered sites.
+- **`espn-news`** — fetches `site.api.espn.com/apis/site/v2/sports/{league}/news` directly. Bypasses ESPN's r.jina.ai bot-wall. Body is the API's `description` field (summary only — ESPN's full-text API is private). Configurable via `adapterConfig.league` (e.g. `football/nfl`, `basketball/nba`, `hockey/nhl`).
+- **`inbox`** — synthetic source that lists articles saved via the phone-side UI. Article bodies fetched on-demand via the jina adapter.
+
+Adapters are registered in `src/adapters/index.ts`. Adding a new one means: write a module exporting an `Adapter`, add it to the registry, optionally seed a default source using it.
 
 ## Article cache
 
@@ -66,7 +85,7 @@ When you close Glance mid-article, your `{source, article, page}` is persisted. 
 
 | Limitation | Workaround |
 |---|---|
-| **ESPN** bot-walls r.jina.ai (and CBS Sports, bare yahoo.com). Adding `https://espn.com` as a source returns 0 articles | Use `sports.yahoo.com` for sports (default), or wait for v1.5's planned ESPN-API adapter (uses `site.api.espn.com` directly) |
+| **ESPN** bot-walls r.jina.ai for the public site, and so do CBS Sports + bare yahoo.com. Adding `https://espn.com` as a generic source returns 0 articles | Use the bundled "ESPN — NFL" default source (uses ESPN's API via the `espn-news` adapter — works perfectly). Other leagues: change `adapterConfig.league` to `basketball/nba`, `hockey/nhl`, `baseball/mlb`, etc. |
 | **Paywalled articles** show only the teaser, with a "behind a paywall" warning | Open the URL in your phone browser to read the full article |
 | **r.jina.ai free tier**: ~200 requests / IP / day | Aggressive caching keeps power users well under the cap. v2 may add an optional Jina API key field for unlimited use |
 | **Some sites have anti-bot walls even via r.jina.ai** | Detected and shown as "this site blocks automated access". Try a different source |
@@ -80,7 +99,11 @@ npm run dev     # Vite dev server on :5175
 npm run build   # tsc + vite build → dist/
 npm run pack    # evenhub pack → glance.ehpk
 npm run deploy  # build + pack in one step
+npm test        # run Vitest unit + integration tests
+npm run test:watch   # Vitest in watch mode while editing
 ```
+
+Test fixtures captured from real `r.jina.ai` responses live under `tests/fixtures/`. Tests cover article extraction (HN cross-domain, CNN/BBC same-site, blocklist filtering, dedupe, relative URL resolution, mailto/javascript rejection), pagination (paragraph/sentence/word boundaries, markdown stripping, content preservation), paywall + bot-wall classification, URL validation, and default-source invariants.
 
 The dev server runs on port 5175 to avoid colliding with Phils Home (5174) or Vite default (5173).
 
@@ -131,14 +154,20 @@ No bridge service, no Mac dependency, no Tailscale. The whole stack is plugin co
 
 | File | Purpose |
 |---|---|
-| `src/main.ts` | Entry, three-layer navigation state machine, phone-side settings UI |
+| `src/main.ts` | Entry, three-layer navigation state machine, phone-side settings UI (sources + inbox forms) |
 | `src/even.ts` | Glasses bridge wrapper — text container + modal picker + input routing |
-| `src/jina.ts` | r.jina.ai client + paywall/bot-wall classifier |
+| `src/adapters/index.ts` | Adapter registry + `Adapter` interface + `getAdapter(source)` |
+| `src/adapters/jina.ts` | Default adapter — uses r.jina.ai for both homepage extraction and article body |
+| `src/adapters/espn.ts` | ESPN adapter — uses `site.api.espn.com` news endpoint to bypass the bot wall |
+| `src/adapters/inbox.ts` | Inbox adapter — lists saved-URL articles from local storage |
+| `src/jina.ts` | r.jina.ai HTTP client + paywall/bot-wall classifier |
 | `src/extract.ts` | Markdown link → article-shaped item extractor |
 | `src/paginate.ts` | ~400-char text pagination on word boundaries |
-| `src/storage.ts` | Native `setLocalStorage` wrapper + browser fallback for dev preview |
+| `src/storage.ts` | Native `setLocalStorage` wrapper + browser fallback |
 | `src/sources.ts` | Default source list + URL validation |
-| `src/types.ts` | Shared interfaces |
+| `src/types.ts` | Shared interfaces (`Source`, `Article`, `AdapterKind`, etc.) |
+| `tests/*.test.ts` | Vitest unit + integration tests |
+| `tests/fixtures/*.txt` | Captured r.jina.ai responses for repeatable testing |
 
 ## Roadmap
 

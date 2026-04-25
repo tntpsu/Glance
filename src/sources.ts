@@ -19,11 +19,22 @@ function id(): string {
 }
 
 export const DEFAULT_SOURCES: Source[] = [
+  // Inbox is always first — saved articles and any incoming share-sheet URLs
+  // land here. Synthetic URL since the inbox adapter doesn't fetch a homepage.
+  { id: id(), title: '★ Saved articles', url: 'inbox://saved', adapter: 'inbox' },
   { id: id(), title: 'Hacker News', url: 'https://news.ycombinator.com' },
   { id: id(), title: 'CNN', url: 'https://www.cnn.com' },
-  { id: id(), title: 'Yahoo News', url: 'https://news.yahoo.com' },
+  // ESPN now uses the public news API directly — bypasses the bot wall
+  // that blocks r.jina.ai. League is configurable per source.
+  {
+    id: id(),
+    title: 'ESPN — NFL',
+    url: 'espn-news://football/nfl',
+    adapter: 'espn-news',
+    adapterConfig: { league: 'football/nfl' },
+  },
   { id: id(), title: 'BBC News', url: 'https://www.bbc.com/news' },
-  { id: id(), title: 'Yahoo Sports', url: 'https://sports.yahoo.com' },
+  { id: id(), title: 'Yahoo News', url: 'https://news.yahoo.com' },
 ]
 
 export function makeSource(title: string, url: string): Source {
@@ -32,10 +43,15 @@ export function makeSource(title: string, url: string): Source {
 
 // Crude URL validation — just enough to reject obvious typos. We're
 // permissive about scheme: http or https accepted, no auth segments.
+// Hostname must contain a dot (so "example.com") or be localhost — Node's
+// URL parser accepts "https:///path" with hostname="path" otherwise.
 export function looksLikeUrl(s: string): boolean {
   try {
     const u = new URL(s)
-    return (u.protocol === 'http:' || u.protocol === 'https:') && !!u.hostname
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+    if (!u.hostname) return false
+    if (u.hostname === 'localhost') return true
+    return u.hostname.includes('.')
   } catch {
     return false
   }

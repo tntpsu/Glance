@@ -2,16 +2,27 @@
 // are namespaced "reader:" so a future plugin in the same Even Hub install
 // can't accidentally collide.
 
+export type AdapterKind = 'jina' | 'espn-news' | 'inbox'
+
 export interface Source {
   id: string // UUID
-  url: string // homepage or section URL — e.g. "https://espn.com"
+  url: string // homepage URL for jina; "espn-news://<league>" for espn-news; "inbox://saved" for inbox
   title: string // user-supplied display name — e.g. "ESPN"
+  adapter?: AdapterKind // defaults to 'jina' when absent
+  adapterConfig?: { league?: string } // espn-news: e.g. "football/nfl"
   lastFetchedAt?: number
 }
 
 export interface Article {
   url: string // absolute URL of the article
   title: string // headline
+  // Optional summary populated by the adapter at homepage-fetch time.
+  // espn-news populates this from ESPN's API description so we can show
+  // the article body without a second fetch (ESPN bot-walls r.jina.ai).
+  summary?: string
+  // Optional published timestamp (ISO8601) — populated by adapters that
+  // surface it. Used for sort hints and display only.
+  published?: string
 }
 
 export interface ArticleBody {

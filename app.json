@@ -2,7 +2,7 @@
   "package_id": "com.philtullai.glance",
   "edition": "202601",
   "name": "Glance",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.10",
   "entrypoint": "index.html",
@@ -11,7 +11,8 @@
       "name": "network",
       "desc": "Fetches article content via the public r.jina.ai service (CORS-open URL-to-markdown for any web page) so saved sources can render their homepages and article bodies on the glasses.",
       "whitelist": [
-        "https://r.jina.ai"
+        "https://r.jina.ai",
+        "https://site.api.espn.com"
       ]
     }
   ],

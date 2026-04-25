@@ -1,0 +1,25 @@
+Title: Bloomberg - Are you a robot?
+
+URL Source: https://www.bloomberg.com/news/articles/2026-04-24/google-plans-to-invest-up-to-40-billion-in-anthropic
+
+Warning: Target URL returned error 403: Forbidden
+Warning: This page maybe requiring CAPTCHA, please make sure you are authorized to access this page.
+
+Markdown Content:
+## We've detected unusual activity from your computer network
+
+To continue, please click the box below to let us know you're not a robot.
+
+### Why did this happen?
+
+Please make sure your browser supports JavaScript and cookies and that you are not blocking them from loading. For more information you can review our [Terms of Service](https://www.bloomberg.com/notices/tos) and [Cookie Policy](https://www.bloomberg.com/notices/tos).
+
+### Need Help?
+
+For inquiries related to this message please [contact our support team](https://www.bloomberg.com/feedback) and provide the reference ID below.
+
+Block reference ID:e6483e31-40a4-11f1-b628-ff0630a9a1a4
+
+Get the most important global markets news at your fingertips with a [Bloomberg.com](https://bloomberg.com/) subscription.
+
+[SUBSCRIBE NOW](https://www.bloomberg.com/subscription)

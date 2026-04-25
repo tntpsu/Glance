@@ -6,9 +6,10 @@
 // putting glasses on). The glasses-side display is driven via the
 // EvenRuntime returned from connectEvenRuntime.
 
+import { addInboxItem, setInboxBridge } from './adapters/inbox'
+import { getAdapter } from './adapters/index'
 import { connectEvenRuntime, type EvenRuntime, type InputSource } from './even'
-import { extractArticles } from './extract'
-import { classifyBody, fetchViaJina, JinaError } from './jina'
+import { JinaError } from './jina'
 import { paginate } from './paginate'
 import { DEFAULT_SOURCES, looksLikeUrl, makeSource } from './sources'
 import {
@@ -49,6 +50,23 @@ root.innerHTML = `
     <p style="color: #7b7b7b; margin: 0 0 1.5rem 0;">Read articles from your saved sites on Even G2 glasses.</p>
 
     <p id="status" style="margin: 0 0 1rem 0;">Connecting…</p>
+
+    <section>
+      <h2 style="font-size: 1.1em; margin: 1.25rem 0 .5rem 0;">Save an article (Inbox)</h2>
+      <p style="color: #7b7b7b; margin: 0 0 .5rem 0; font-size: .9em;">
+        Paste any article URL — Glance will queue it under "★ Saved articles" on the glasses.
+        Pro tip: copy a URL from any app's share sheet, then come back here and paste it below.
+      </p>
+      <form id="add-inbox-form" style="display: grid; gap: .25rem; max-width: 480px; margin-bottom: 1rem;">
+        <label>Article URL <input id="inbox-url" type="url" required placeholder="https://example.com/article" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
+        <label>Title <span style="color: #7b7b7b; font-size: .85em;">(optional — derived from URL if empty)</span> <input id="inbox-title" type="text" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
+        <div style="display: flex; gap: .5rem; margin-top: .25rem;">
+          <button type="submit" style="padding: .4rem .8rem; cursor: pointer;">Save to inbox</button>
+          <button type="button" id="paste-clipboard" style="padding: .4rem .8rem; cursor: pointer; background: #eee;">Paste from clipboard</button>
+        </div>
+        <p id="inbox-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
+      </form>
+    </section>
 
     <section>
       <h2 style="font-size: 1.1em; margin: 0 0 .5rem 0;">Sources</h2>
@@ -146,6 +164,60 @@ resetBtn.addEventListener('click', async () => {
   state.sources = [...DEFAULT_SOURCES]
   await saveState(state)
   renderSourcesList()
+})
+
+// --- inbox add form ---
+
+const inboxForm = document.querySelector<HTMLFormElement>('#add-inbox-form')!
+const inboxUrlInput = document.querySelector<HTMLInputElement>('#inbox-url')!
+const inboxTitleInput = document.querySelector<HTMLInputElement>('#inbox-title')!
+const inboxStatus = document.querySelector<HTMLParagraphElement>('#inbox-status')!
+const pasteBtn = document.querySelector<HTMLButtonElement>('#paste-clipboard')!
+
+async function addInboxFromForm(url: string, title: string): Promise<void> {
+  if (!looksLikeUrl(url)) {
+    inboxStatus.style.color = '#c00'
+    inboxStatus.textContent = 'URL must be a valid http(s) URL.'
+    return
+  }
+  const item = await addInboxItem(url, title)
+  inboxStatus.style.color = '#2a2'
+  inboxStatus.textContent = `Saved: ${item.title.slice(0, 60)}`
+  inboxUrlInput.value = ''
+  inboxTitleInput.value = ''
+  // Clear status after 4s so it doesn't linger.
+  window.setTimeout(() => {
+    inboxStatus.textContent = ''
+  }, 4000)
+}
+
+inboxForm.addEventListener('submit', e => {
+  e.preventDefault()
+  void addInboxFromForm(inboxUrlInput.value.trim(), inboxTitleInput.value.trim())
+})
+
+pasteBtn.addEventListener('click', async () => {
+  inboxStatus.style.color = '#7b7b7b'
+  inboxStatus.textContent = 'Reading clipboard…'
+  try {
+    const text = await navigator.clipboard.readText()
+    if (!text) {
+      inboxStatus.style.color = '#c00'
+      inboxStatus.textContent = 'Clipboard is empty.'
+      return
+    }
+    if (!looksLikeUrl(text.trim())) {
+      inboxStatus.style.color = '#c00'
+      inboxStatus.textContent = `Clipboard isn't a URL (${text.slice(0, 40)}…).`
+      return
+    }
+    inboxUrlInput.value = text.trim()
+    inboxStatus.style.color = '#2a2'
+    inboxStatus.textContent = 'Pasted — review and tap "Save to inbox".'
+  } catch (err) {
+    inboxStatus.style.color = '#c00'
+    inboxStatus.textContent = `Clipboard access denied: ${err instanceof Error ? err.message : String(err)}`
+  }
 })
 
 // --- glasses-side rendering helpers ---
@@ -290,20 +362,26 @@ async function openSource(source: Source): Promise<void> {
   currentArticles = []
   await paint(true)
 
-  const cached = articleListCache.get(source.id)
-  if (cached && Date.now() - cached.fetchedAt < ARTICLE_LIST_TTL_MS) {
-    currentArticles = cached.articles
-    await paint()
-    return
+  // Inbox is always re-read from storage (cheap) so newly-added articles
+  // appear immediately. Other sources hit a 5-minute in-memory cache.
+  if (source.adapter !== 'inbox') {
+    const cached = articleListCache.get(source.id)
+    if (cached && Date.now() - cached.fetchedAt < ARTICLE_LIST_TTL_MS) {
+      currentArticles = cached.articles
+      await paint()
+      return
+    }
   }
   try {
-    const result = await fetchViaJina(source.url)
-    const articles = extractArticles(result.markdown, source.url)
-    articleListCache.set(source.id, {
-      articles,
-      fetchedAt: Date.now(),
-      sourceUrl: source.url,
-    })
+    const adapter = getAdapter(source)
+    const articles = await adapter.fetchHomepage(source)
+    if (source.adapter !== 'inbox') {
+      articleListCache.set(source.id, {
+        articles,
+        fetchedAt: Date.now(),
+        sourceUrl: source.url,
+      })
+    }
     source.lastFetchedAt = Date.now()
     await saveState(state)
     currentArticles = articles
@@ -351,32 +429,27 @@ async function openArticle(article: Article): Promise<void> {
       body = cached.body
       title = cached.title || article.title
     } else {
-      const result = await fetchViaJina(article.url)
-      body = result.markdown
-      title = result.title || article.title
-      await putCachedBody({
+      const adapter = currentSource ? getAdapter(currentSource) : getAdapter({
+        id: '__synthetic',
         url: article.url,
-        title,
-        body,
-        fetchedAt: Date.now(),
-      })
+        title: article.title,
+      } as Source)
+      const result = await adapter.fetchArticleBody(currentSource!, article)
+      body = result.body
+      title = result.title || article.title
+      // Only cache real bodies — adapter-generated placeholder messages
+      // (paywall/bot-wall warnings) shouldn't poison the cache, the user
+      // might re-try later when the site cooperates.
+      if (!result.classification) {
+        await putCachedBody({
+          url: article.url,
+          title,
+          body,
+          fetchedAt: Date.now(),
+        })
+      }
     }
     currentArticle = { url: article.url, title }
-    // Classify before pagination so we can show a meaningful error
-    // instead of a single empty page.
-    const classification = classifyBody(body)
-    if (!classification.ok) {
-      const reasonText =
-        classification.reason === 'paywall'
-          ? 'This article appears to be behind a paywall. Open it in your browser to read the full text.'
-          : classification.reason === 'bot-wall'
-            ? 'This site blocks automated access. Try a different source.'
-            : 'Article body looks empty — extraction may have failed.'
-      currentPages = paginate(reasonText)
-      currentPageIndex = 0
-      await paint()
-      return
-    }
     currentPages = paginate(body)
     currentPageIndex = 0
     await paint()
@@ -475,10 +548,12 @@ async function bootstrap(): Promise<void> {
   even = await connectEvenRuntime(initial)
 
   if (even) {
-    setStorageBridge({
+    const bridge = {
       getStorage: even.getStorage,
       setStorage: even.setStorage,
-    })
+    }
+    setStorageBridge(bridge)
+    setInboxBridge(bridge)
   }
 
   // Load persisted state, seed defaults on first launch.

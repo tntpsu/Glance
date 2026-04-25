@@ -11,20 +11,24 @@ const PAGE_CAP = 400
 const PAGE_MIN = 200 // don't break a page shorter than this if we can avoid it
 
 // Strip markdown decorations that don't render well on the glasses font.
+// Order matters: bullets MUST be converted before the *_/_ stripping pass,
+// since "* bullet" shares the asterisk character with the bold/italic
+// markers and would otherwise be eaten before we recognize it as a bullet.
 function strip(md: string): string {
   return md
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '') // images
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links → just the link text
     .replace(/^#+\s*/gm, '') // headings → drop the # prefix
     .replace(/^>\s*/gm, '') // blockquote markers
+    .replace(/^[-*+]\s+/gm, '• ') // bullets — must run BEFORE the * strip
     .replace(/(\*\*|__|\*|_|`)/g, '') // bold / italic / code marks
-    .replace(/^[-*+]\s+/gm, '• ') // bullets
     .replace(/\n{3,}/g, '\n\n') // collapse big gaps
     .trim()
 }
 
 export function paginate(rawMarkdown: string, capChars = PAGE_CAP): string[] {
   const text = strip(rawMarkdown)
+  if (text.length === 0) return []
   if (text.length <= capChars) return [text]
 
   const pages: string[] = []
