@@ -109,7 +109,7 @@ npm run test:watch   # Vitest in watch mode while editing
 
 Test fixtures captured from real `r.jina.ai` responses live under `tests/fixtures/`. Tests cover article extraction (HN cross-domain, CNN/BBC same-site, blocklist filtering, dedupe, relative URL resolution, mailto/javascript rejection), pagination (paragraph/sentence/word boundaries, markdown stripping, content preservation), paywall + bot-wall classification, URL validation, and default-source invariants.
 
-The dev server runs on port 5175 to avoid colliding with Phils Home (5174) or Vite default (5173).
+The dev server runs on port 5175 to avoid colliding with Pulse (5174) or Vite default (5173).
 
 ### Test on real glasses without packing
 
@@ -175,7 +175,7 @@ No bridge service, no Mac dependency, no Tailscale. The whole stack is plugin co
 
 ## Roadmap
 
-See `~/Documents/PhilsHome/ROADMAP.md` § "Plan: Glasses Web Reader" for the full spec.
+See `~/Documents/Pulse/ROADMAP.md` § "Plan: Glasses Web Reader" for the full spec.
 
 **Queued for v1.x / v2:**
 - ESPN-specific API adapter (uses `site.api.espn.com` to bypass the bot wall)

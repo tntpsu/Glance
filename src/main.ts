@@ -839,7 +839,7 @@ function onSwipe(dir: 'up' | 'down'): void {
 function onDoubleTap(_source: InputSource): void {
   // Double-tap = back, regardless of source. Glasses convention is exit
   // on glasses-2-tap, but Glance follows the same user preference as
-  // Phils Home (back-then-exit, see CLAUDE.md note in PhilsHome).
+  // Pulse (back-then-exit, see CLAUDE.md note in Pulse).
   if (view === 'reader' || view === 'articles') {
     void goBack()
     return

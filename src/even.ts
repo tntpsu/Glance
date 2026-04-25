@@ -1,6 +1,6 @@
 // Glasses bridge for Glance. Single full-screen text container for the
 // reader/article-list views, plus a list-container modal picker for
-// source / article selection. Mirrors the patterns proven in PhilsHome's
+// source / article selection. Mirrors the patterns proven in Pulse's
 // even.ts (BLE-write serialization, modal rebuild flow, double-tap routing).
 
 import {
