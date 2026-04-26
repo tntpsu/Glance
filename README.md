@@ -8,9 +8,29 @@ App icon: `assets/icon.svg` (master) and `assets/icon.png` (1024×1024 export). 
 
 Three-layer navigation: pick a saved site → see its current article list → tap a headline to read the body, paginated. Most extraction happens via [`r.jina.ai`](https://jina.ai/reader/) (free public URL-to-markdown service). Adapter pattern lets specific sites use better paths — ESPN uses its public news API to bypass the bot wall.
 
-## Status: v0.2.0 (Vitest tests, ESPN adapter, Inbox)
+## Status: v0.5.0 (default Worker, Browse-now, line-by-line scroll)
 
-The full app is built. Sideload to your glasses to test:
+v0.5.0 differentiates against the third-party "ER Browser" app (~3K downloads on the
+Hub) on three axes:
+
+- **Default Worker**: paste your Cloudflare Worker URL + bearer token in phone
+  settings → all article-body fetches try your Worker first (server-side Mozilla
+  Readability) and fall back to r.jina.ai only on failure. Eliminates r.jina.ai's
+  15–25s cold starts and rate limits. The Worker template at `worker-template/`
+  is unchanged — same `/reader` endpoint also used for paywalled sites.
+- **Save & open on glasses**: phone-side button on the inbox-add form sets a
+  one-shot pointer; glasses bootstrap + foreground handler navigates straight
+  into the article. Closes the gap with ER Browser's one-step "type URL → read"
+  flow.
+- **Line-by-line scroll mode**: phone-side toggle. Each swipe advances ~100
+  chars instead of ~400, for closer-to-continuous reading. Preserves resume
+  position; switching mode re-paginates the current article.
+
+Glance's existing differentiators (curated sources, ESPN scoreboard, Inbox,
+30-day cache, paywalled-site Worker, clipboard auto-detect with banner) remain
+the install-decision wedge versus ER Browser's "type any URL each time" model.
+
+Sideload to your glasses to test:
 
 ```
 ~/Documents/Glance/glance.ehpk

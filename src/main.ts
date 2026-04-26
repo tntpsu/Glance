@@ -9,20 +9,30 @@
 import { ESPN_LEAGUES } from './adapters/espn'
 import { addInboxItem, setInboxBridge } from './adapters/inbox'
 import { getAdapter } from './adapters/index'
+import { setDefaultWorkerCache } from './adapters/jina'
 import { connectEvenRuntime, type EvenRuntime, type InputSource } from './even'
 import { JinaError, setJinaApiKeyCache } from './jina'
 import { paginate } from './paginate'
 import { DEFAULT_SOURCES, looksLikeUrl, makeSource } from './sources'
 import {
+  clearDefaultWorker,
+  clearPendingOpen,
   getCachedBody,
+  getDefaultWorker,
   getJinaApiKey,
+  getPendingOpen,
+  getScrollMode,
   loadReadUrls,
   loadState,
   markRead,
   putCachedBody,
   saveState,
+  setDefaultWorker,
   setJinaApiKey,
+  setPendingOpen,
+  setScrollMode,
   setStorageBridge,
+  type ScrollMode,
 } from './storage'
 import type { Article, ReaderState, Source } from './types'
 
@@ -47,6 +57,18 @@ let currentPageIndex = 0
 // scrolling and committing are decoupled cleanly.
 let sourceCursor = 0
 let articleCursor = 0
+
+// Scroll mode — 'page' (default, ~400 chars per swipe) or 'line'
+// (~100 chars, smaller jump per swipe). Hydrated from storage in
+// bootstrap; updated when the settings toggle fires.
+let scrollMode: ScrollMode = 'page'
+
+const PAGE_CAP = 400
+const LINE_CAP = 100
+
+function paginateForMode(body: string): string[] {
+  return paginate(body, scrollMode === 'line' ? LINE_CAP : PAGE_CAP)
+}
 
 // Sliding-window size for both list views — fits the right-column with
 // header + cursor + 5 visible items + hint footer comfortably.
@@ -77,8 +99,9 @@ root.innerHTML = `
       <form id="add-inbox-form" style="display: grid; gap: .25rem; max-width: 480px; margin-bottom: 1rem;">
         <label>Article URL <input id="inbox-url" type="url" required placeholder="https://example.com/article" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
         <label>Title <span style="color: #7b7b7b; font-size: .85em;">(optional — derived from URL if empty)</span> <input id="inbox-title" type="text" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
-        <div style="display: flex; gap: .5rem; margin-top: .25rem;">
+        <div style="display: flex; gap: .5rem; margin-top: .25rem; flex-wrap: wrap;">
           <button type="submit" style="padding: .4rem .8rem; cursor: pointer;">Save to inbox</button>
+          <button type="button" id="save-and-open" style="padding: .4rem .8rem; cursor: pointer; background: #232323; color: #fff;">Save &amp; open on glasses</button>
           <button type="button" id="paste-clipboard" style="padding: .4rem .8rem; cursor: pointer; background: #eee;">Paste from clipboard</button>
         </div>
         <p id="inbox-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
@@ -135,6 +158,41 @@ root.innerHTML = `
     </section>
 
     <section style="margin-top: 2rem;">
+      <h2 style="font-size: 1.1em; margin: 0 0 .5rem 0;">Reading mode</h2>
+      <p style="color: #7b7b7b; margin: 0 0 .5rem 0; font-size: .9em;">
+        How much text each swipe advances. Page = whole screen at once. Line = smaller chunks for closer-to-continuous reading.
+      </p>
+      <div style="display: flex; gap: 1rem; max-width: 480px;">
+        <label style="display: flex; align-items: center; gap: .35rem; cursor: pointer;">
+          <input type="radio" name="scroll-mode" value="page" /> Page-by-page
+        </label>
+        <label style="display: flex; align-items: center; gap: .35rem; cursor: pointer;">
+          <input type="radio" name="scroll-mode" value="line" /> Line-by-line
+        </label>
+      </div>
+      <p id="scroll-mode-status" style="color: #2a2; font-size: .85em; min-height: 1.2em; margin: .25rem 0 0 0;"></p>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <details>
+        <summary style="cursor: pointer; color: #232323;">Default Worker (optional — universal extractor)</summary>
+        <p style="color: #7b7b7b; margin: .5rem 0; font-size: .85em; max-width: 520px;">
+          Glance reads articles via <code>r.jina.ai</code> by default — free, no setup. The free tier has cold starts up to ~25s on
+          unfamiliar sites and rate-limits per IP. If you've deployed the Cloudflare Worker template at <code>worker-template/</code>,
+          paste its URL + bearer token here and Glance will try your Worker FIRST for every article body, falling back to r.jina.ai
+          only if your Worker is unreachable. Faster, no rate limits, and no third-party seeing your reading list.
+        </p>
+        <form id="default-worker-form" style="display: grid; gap: .25rem; max-width: 480px;">
+          <label>Worker URL <input id="default-worker-url" type="url" placeholder="https://glance-reader.your-sub.workers.dev" style="padding: .35rem; width: 100%; box-sizing: border-box;" /></label>
+          <label>Bearer token <input id="default-worker-token" type="password" placeholder="(your SHARED_SECRET)" style="padding: .35rem; width: 100%; box-sizing: border-box; font-family: monospace;" /></label>
+          <div style="display: flex; gap: .5rem; margin-top: .25rem;">
+            <button type="submit" style="padding: .35rem .7rem; cursor: pointer;">Save</button>
+            <button type="button" id="default-worker-clear" style="padding: .35rem .7rem; cursor: pointer; background: #eee;">Clear</button>
+          </div>
+          <p id="default-worker-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
+        </form>
+      </details>
+
       <details>
         <summary style="cursor: pointer; color: #7b7b7b;">Advanced — Jina API key (optional)</summary>
         <p style="color: #7b7b7b; margin: .5rem 0; font-size: .85em;">
@@ -325,6 +383,13 @@ const inboxUrlInput = document.querySelector<HTMLInputElement>('#inbox-url')!
 const inboxTitleInput = document.querySelector<HTMLInputElement>('#inbox-title')!
 const inboxStatus = document.querySelector<HTMLParagraphElement>('#inbox-status')!
 const pasteBtn = document.querySelector<HTMLButtonElement>('#paste-clipboard')!
+const saveAndOpenBtn = document.querySelector<HTMLButtonElement>('#save-and-open')!
+const defaultWorkerForm = document.querySelector<HTMLFormElement>('#default-worker-form')!
+const defaultWorkerUrlInput = document.querySelector<HTMLInputElement>('#default-worker-url')!
+const defaultWorkerTokenInput = document.querySelector<HTMLInputElement>('#default-worker-token')!
+const defaultWorkerClearBtn = document.querySelector<HTMLButtonElement>('#default-worker-clear')!
+const defaultWorkerStatus = document.querySelector<HTMLParagraphElement>('#default-worker-status')!
+const scrollModeStatus = document.querySelector<HTMLParagraphElement>('#scroll-mode-status')!
 
 async function addInboxFromForm(url: string, title: string): Promise<void> {
   if (!looksLikeUrl(url)) {
@@ -347,6 +412,81 @@ inboxForm.addEventListener('submit', e => {
   e.preventDefault()
   void addInboxFromForm(inboxUrlInput.value.trim(), inboxTitleInput.value.trim())
 })
+
+// "Save & open on glasses" — the closest thing we have to ER Browser's
+// one-step "type URL → read" flow. Adds to inbox AND sets pendingOpen
+// so the glasses-side bootstrap/foreground handler navigates straight
+// into the article without the user having to find it in the inbox list.
+saveAndOpenBtn.addEventListener('click', async () => {
+  const url = inboxUrlInput.value.trim()
+  const title = inboxTitleInput.value.trim()
+  if (!looksLikeUrl(url)) {
+    inboxStatus.style.color = '#c00'
+    inboxStatus.textContent = 'URL must be a valid http(s) URL.'
+    return
+  }
+  await addInboxItem(url, title)
+  await setPendingOpen(url)
+  inboxStatus.style.color = '#2a2'
+  inboxStatus.textContent = 'Saved. Put on your glasses to read it now.'
+  inboxUrlInput.value = ''
+  inboxTitleInput.value = ''
+  window.setTimeout(() => { inboxStatus.textContent = '' }, 5000)
+})
+
+// --- default Worker form ---
+
+defaultWorkerForm.addEventListener('submit', async e => {
+  e.preventDefault()
+  const url = defaultWorkerUrlInput.value.trim()
+  const token = defaultWorkerTokenInput.value.trim()
+  if (!url || !token) {
+    defaultWorkerStatus.style.color = '#c00'
+    defaultWorkerStatus.textContent = 'Both URL and bearer token are required.'
+    return
+  }
+  await setDefaultWorker(url, token)
+  setDefaultWorkerCache({ workerUrl: url, bearerToken: token })
+  defaultWorkerStatus.style.color = '#2a2'
+  defaultWorkerStatus.textContent = 'Saved. Articles now use your Worker first.'
+  window.setTimeout(() => { defaultWorkerStatus.textContent = '' }, 4000)
+})
+
+defaultWorkerClearBtn.addEventListener('click', async () => {
+  await clearDefaultWorker()
+  setDefaultWorkerCache(null)
+  defaultWorkerUrlInput.value = ''
+  defaultWorkerTokenInput.value = ''
+  defaultWorkerStatus.style.color = '#2a2'
+  defaultWorkerStatus.textContent = 'Cleared. Articles use r.jina.ai again.'
+  window.setTimeout(() => { defaultWorkerStatus.textContent = '' }, 4000)
+})
+
+// --- scroll mode toggle ---
+
+for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="scroll-mode"]')) {
+  radio.addEventListener('change', async () => {
+    const value = radio.value === 'line' ? 'line' : 'page'
+    scrollMode = value
+    await setScrollMode(value)
+    scrollModeStatus.style.color = '#2a2'
+    scrollModeStatus.textContent = value === 'line'
+      ? 'Line-by-line. Each swipe advances about one line.'
+      : 'Page-by-page. Each swipe advances a full screen.'
+    window.setTimeout(() => { scrollModeStatus.textContent = '' }, 4000)
+    // If the user is mid-article, re-paginate so the new mode takes
+    // effect immediately. Their page index resets to 0 (no clean way
+    // to map old-cap pages → new-cap pages mid-article).
+    if (currentPages.length > 0 && currentArticle) {
+      const cached = await getCachedBody(currentArticle.url)
+      if (cached) {
+        currentPages = paginateForMode(cached.body)
+        currentPageIndex = 0
+        await paint()
+      }
+    }
+  })
+}
 
 // --- Jina API key form ---
 
@@ -689,6 +829,22 @@ async function openSource(source: Source): Promise<void> {
   }
 }
 
+// Phone-side "Save & open now" sets KEY_PENDING_OPEN to a URL the user
+// just saved. On bootstrap and on each foreground, we check + clear that
+// key and navigate straight to the article view. Returns true when it
+// consumed something so the caller can skip its own default render.
+async function tryConsumePendingOpen(): Promise<boolean> {
+  const url = await getPendingOpen()
+  if (!url) return false
+  await clearPendingOpen()
+  // Navigate from the inbox source so "back" goes to the inbox list.
+  const inboxSrc = state.sources.find(s => s.adapter === 'inbox') ?? null
+  if (inboxSrc) currentSource = inboxSrc
+  view = 'reader'
+  await openArticle({ url, title: '' })
+  return true
+}
+
 async function openArticle(article: Article): Promise<void> {
   currentArticle = article
   currentPages = []
@@ -731,7 +887,7 @@ async function openArticle(article: Article): Promise<void> {
       }
     }
     currentArticle = { url: article.url, title }
-    currentPages = paginate(body)
+    currentPages = paginateForMode(body)
     currentPageIndex = 0
     await paint()
   } catch (err) {
@@ -872,6 +1028,24 @@ async function bootstrap(): Promise<void> {
     jinaKeyInput.value = savedJinaKey
   }
 
+  // Hydrate default Worker config (when set, all article-body fetches try
+  // it before falling back to r.jina.ai — see adapters/jina.ts). Also
+  // seed the settings inputs.
+  const savedWorker = await getDefaultWorker()
+  if (savedWorker) {
+    setDefaultWorkerCache(savedWorker)
+    defaultWorkerUrlInput.value = savedWorker.workerUrl
+    defaultWorkerTokenInput.value = savedWorker.bearerToken
+  } else {
+    setDefaultWorkerCache(null)
+  }
+
+  // Hydrate scroll mode for paginate cap.
+  scrollMode = await getScrollMode()
+  for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="scroll-mode"]')) {
+    radio.checked = radio.value === scrollMode
+  }
+
   // Hydrate the read-state set so the article list shows ✓ markers.
   readUrls = await loadReadUrls()
 
@@ -919,8 +1093,19 @@ async function bootstrap(): Promise<void> {
   even.onSwipe(onSwipe)
   even.onDoubleTap(onDoubleTap)
   even.onForeground(() => {
-    void paint()
+    void (async () => {
+      // Phone-side "Save & open now" sets a one-shot pendingOpen pointer.
+      // On every foreground, check + consume it before paint so the user
+      // sees the article immediately on putting glasses back on.
+      const consumed = await tryConsumePendingOpen()
+      if (!consumed) await paint()
+    })()
   })
+
+  // Phone-side "Save & open now" button might have fired before the
+  // glasses connected — check on bootstrap too. Takes precedence over
+  // resume restore.
+  if (await tryConsumePendingOpen()) return
 
   // Resume to last article + page if persisted.
   if (state.resume?.sourceId) {
@@ -936,7 +1121,7 @@ async function bootstrap(): Promise<void> {
           const cached = await getCachedBody(state.resume.articleUrl)
           if (cached) {
             currentArticle = { url: cached.url, title: cached.title }
-            currentPages = paginate(cached.body)
+            currentPages = paginateForMode(cached.body)
             await paint()
             return
           }

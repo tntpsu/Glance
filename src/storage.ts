@@ -52,6 +52,22 @@ const KEY_BODY_INDEX = 'reader:bodyIndex:v1'
 // Optional Jina API key — when set, sent as Authorization: Bearer header
 // to bump rate limits past the free 200/day per IP per domain.
 const KEY_JINA_API_KEY = 'reader:jinaApiKey:v1'
+// Optional default Worker — when set, ALL article-body fetches try this
+// Worker before falling back to r.jina.ai. Different from per-source
+// paywall workers (those bind to one specific site URL); this one is
+// the universal extractor. Reduces dependency on r.jina.ai for cold
+// starts + rate limits.
+const KEY_DEFAULT_WORKER_URL = 'reader:defaultWorkerUrl:v1'
+const KEY_DEFAULT_WORKER_TOKEN = 'reader:defaultWorkerToken:v1'
+// One-shot pointer set by the phone-side "Browse now" button. Glasses
+// consumes it on next foreground/render and auto-navigates to the
+// pointed-at article. Closes the gap with ER Browser's one-step
+// "type URL → read" flow.
+const KEY_PENDING_OPEN = 'reader:pendingOpen:v1'
+// User-toggled scroll mode. 'page' = ~400-char paginate (default).
+// 'line' = ~80-char paginate so each swipe advances less text. Matches
+// ER Browser's line-by-line option.
+const KEY_SCROLL_MODE = 'reader:scrollMode:v1'
 // Set of article URLs the user has finished reading. Trimmed to a hard
 // cap (most-recent-N) so it doesn't grow unbounded.
 const KEY_READ_URLS = 'reader:readUrls:v1'
@@ -96,6 +112,58 @@ export async function getJinaApiKey(): Promise<string | null> {
 
 export async function setJinaApiKey(key: string | null): Promise<void> {
   await writeRaw(KEY_JINA_API_KEY, (key ?? '').trim())
+}
+
+// --- Default Worker (universal extractor — bypasses r.jina.ai) ---
+
+export interface DefaultWorker {
+  workerUrl: string
+  bearerToken: string
+}
+
+export async function getDefaultWorker(): Promise<DefaultWorker | null> {
+  const url = (await readRaw(KEY_DEFAULT_WORKER_URL))?.trim()
+  const token = (await readRaw(KEY_DEFAULT_WORKER_TOKEN))?.trim()
+  if (!url || !token) return null
+  return { workerUrl: url, bearerToken: token }
+}
+
+export async function setDefaultWorker(workerUrl: string, bearerToken: string): Promise<void> {
+  await writeRaw(KEY_DEFAULT_WORKER_URL, workerUrl.trim())
+  await writeRaw(KEY_DEFAULT_WORKER_TOKEN, bearerToken.trim())
+}
+
+export async function clearDefaultWorker(): Promise<void> {
+  await writeRaw(KEY_DEFAULT_WORKER_URL, '')
+  await writeRaw(KEY_DEFAULT_WORKER_TOKEN, '')
+}
+
+// --- Pending open (one-shot from phone-side "Browse now") ---
+
+export async function getPendingOpen(): Promise<string | null> {
+  const raw = (await readRaw(KEY_PENDING_OPEN))?.trim()
+  return raw ? raw : null
+}
+
+export async function setPendingOpen(url: string): Promise<void> {
+  await writeRaw(KEY_PENDING_OPEN, url.trim())
+}
+
+export async function clearPendingOpen(): Promise<void> {
+  await writeRaw(KEY_PENDING_OPEN, '')
+}
+
+// --- Scroll mode ---
+
+export type ScrollMode = 'page' | 'line'
+
+export async function getScrollMode(): Promise<ScrollMode> {
+  const raw = (await readRaw(KEY_SCROLL_MODE))?.trim()
+  return raw === 'line' ? 'line' : 'page'
+}
+
+export async function setScrollMode(mode: ScrollMode): Promise<void> {
+  await writeRaw(KEY_SCROLL_MODE, mode)
 }
 
 // --- Read-state ---
