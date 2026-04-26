@@ -66,6 +66,19 @@ async function waitForState(predicate, { timeoutMs = 12_000, label } = {}) {
   throw new Error(`timed out waiting for state: ${label ?? '(unlabeled)'}`)
 }
 
+// Sample over `durationMs`, return count of [glance:state] logs in window.
+// Catches the silent-render-loop regression where the app emits the right
+// state once and then stops. Pattern lifted from lyrics-glow.
+async function countStateLogs(durationMs) {
+  const before = await fetchConsoleEntries()
+  const startId = before.length > 0 ? before[before.length - 1].id : -1
+  await new Promise(r => setTimeout(r, durationMs))
+  const after = await fetchConsoleEntries()
+  const fresh = after.filter(e => e.id > startId && typeof e.message === 'string' && e.message.includes('[glance:state]'))
+  if (fresh.length > 0) lastConsoleId = Math.max(lastConsoleId, fresh[fresh.length - 1].id)
+  return fresh.length
+}
+
 async function screenshot(name) {
   await mkdir(OUT_DIR, { recursive: true })
   const r = await fetch(`${SIM_BASE}/api/screenshot/glasses`)
