@@ -49,6 +49,14 @@ const FIXTURES = [
   { name: 'nyt-cooking', url: 'https://cooking.nytimes.com/' },
   { name: 'github',    url: 'https://github.com/microsoft/vscode' },
   { name: 'on3',       url: 'https://www.on3.com/teams/penn-state-nittany-lions/' },
+  // v0.5.5 — non-English fixtures to surface chrome-filter blind spots.
+  // Patterns are English-centric ("Subscribe", "Login", "Privacy") so
+  // Spanish / French / German / Japanese chrome will leak heavily until
+  // their equivalents are added.
+  { name: 'lemonde',   url: 'https://www.lemonde.fr/international/' },
+  { name: 'derspiegel',url: 'https://www.spiegel.de/international/' },
+  { name: 'elpais',    url: 'https://elpais.com/internacional/' },
+  { name: 'nhk',       url: 'https://www3.nhk.or.jp/news/' },
 ]
 
 async function fetchOnce(url) {

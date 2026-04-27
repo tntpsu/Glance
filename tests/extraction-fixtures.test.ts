@@ -53,6 +53,13 @@ const REGRESSION_GUARDS: Array<{ name: string; re: RegExp }> = [
   { name: 'SKIP ADVERTISEMENT',         re: /^SKIP ADVERTISEMENT$/m },
   { name: 'Today\'s Paper masthead',    re: /^Today'?s Paper$/im },
   { name: 'Toggle navigation',          re: /^Toggle navigation$/im },
+  // v0.5.5 — non-English chrome
+  { name: 'de: Zum Inhalt springen',    re: /^Zum Inhalt springen$/im },
+  { name: 'de: Anmelden / Abonnement',  re: /^(Anmelden|Abonnement( Abo)?)$/im },
+  { name: 'fr: doubled "Menu Menu"',    re: /^Menu Menu$/im },
+  { name: 'recipe: Jump to Recipe',     re: /^Jump to Recipe$/im },
+  { name: 'recipe: Save Recipe',        re: /^Save Recipe$/im },
+  { name: '404 boilerplate',            re: /^Sorry [-–—] we haven'?t been able/im },
 ]
 
 // Each fixture has at least one snippet that must survive the filter —
@@ -80,6 +87,10 @@ const POSITIVE_SNIPPETS: Record<string, string[]> = {
   'nyt-cooking': ['Recipes'],
   github:     ['vscode'],
   on3:        ['Penn State'],  // user's site — college sports recruiting
+  // v0.5.5 — non-English (snippets in source language so we know real content survived)
+  lemonde:    ['International'],
+  derspiegel: ['SPIEGEL'],
+  elpais:     ['EL PAÍS'],
 }
 
 function listFixtures(): Array<{ name: string; path: string }> {

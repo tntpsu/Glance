@@ -2,7 +2,7 @@ Title: World News
 
 URL Source: https://www.nytimes.com/section/world
 
-Published Time: Mon, 27 Apr 2026 03:25:50 GMT
+Published Time: Mon, 27 Apr 2026 03:45:52 GMT
 
 Markdown Content:
 # World News - The New York Times

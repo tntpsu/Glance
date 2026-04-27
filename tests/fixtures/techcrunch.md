@@ -2,13 +2,13 @@ Title: TechCrunch | Startup and Technology News
 
 URL Source: https://techcrunch.com/
 
-Published Time: 2026-04-26T22:00:46Z
+Published Time: 2026-04-27T03:00:00Z
 
 Markdown Content:
 # TechCrunch | Startup and Technology News
 [Skip to content](https://techcrunch.com/#wp--skip-link--target)
 
-03:21:29:11
+03:20:26:37
 
 The first StrictlyVC of 2026 hits SF on April 30. Tickets are going fast. [Register now.](https://techcrunch.com/events/strictlyvc-san-francisco-2026/?utm_source=tc&utm_medium=ad&utm_campaign=svcsf2026&utm_content=ticketsales&promo=topbanner&display=)
 
@@ -138,7 +138,7 @@ Mega Menu Toggle
 
 *   [Connie Loizos](https://techcrunch.com/author/connie-loizos/)
 
- 4 hours ago
+ 5 hours ago
 
 ![Image 12](https://techcrunch.com/wp-content/uploads/2026/01/elon-tesla-getty.jpg?w=668)
 
@@ -148,7 +148,7 @@ Mega Menu Toggle
 
 *   [Kirsten Korosec](https://techcrunch.com/author/kirsten-korosec/)
 
- 10 hours ago
+ 11 hours ago
 
 ![Image 13](https://techcrunch.com/wp-content/uploads/2026/04/SpeakOn-feat.jpg?w=668)
 
@@ -158,7 +158,7 @@ Mega Menu Toggle
 
 *   [Ivan Mehta](https://techcrunch.com/author/ivan-mehta/)
 
- 11 hours ago
+ 13 hours ago
 
 **Top Headlines**
 
@@ -189,67 +189,77 @@ Mega Menu Toggle
 [See More ![Image 14](https://techcrunch.com/wp-content/themes/tc-24/assets/svg/arrow-up-right.svg)](https://techcrunch.com/latest/)
 
 *   
-![Image 15: Theo Baker](https://techcrunch.com/wp-content/uploads/2025/12/Screenshot-2025-12-11-at-4.37.19-PM.png?w=562)
+![Image 15: Truecaller](https://techcrunch.com/wp-content/uploads/2026/04/truecaller.jpg?w=563)
+
+[Apps](https://techcrunch.com/category/apps/) 
+### [Truecaller faces mounting pressures as its growth matures](https://techcrunch.com/2026/04/26/truecaller-faces-mounting-pressures-as-its-growth-matures/)
+
+    *   [Jagmeet Singh](https://techcrunch.com/author/jagmeet-singh/)
+
+ 31 minutes ago
+
+*   
+![Image 16: Theo Baker](https://techcrunch.com/wp-content/uploads/2025/12/Screenshot-2025-12-11-at-4.37.19-PM.png?w=562)
 
 [Venture](https://techcrunch.com/category/venture/) 
 ### [The Stanford freshmen who want to rule the world . . . will probably read this book and try even harder](https://techcrunch.com/2026/04/26/the-stanford-freshmen-who-want-to-rule-the-world-will-probably-read-this-book-and-try-even-harder/)
 
     *   [Connie Loizos](https://techcrunch.com/author/connie-loizos/)
 
- 4 hours ago
+ 5 hours ago
 
 *   
-![Image 16: The logo and lettering of global online mail order company Amazon can be seen on the façade of Amazon Germany's headquarters in Parkstadt Schwabing in Munich (Bavaria).](https://techcrunch.com/wp-content/uploads/2025/06/GettyImages-2217247219.jpg?w=562)
+![Image 17: The logo and lettering of global online mail order company Amazon can be seen on the façade of Amazon Germany's headquarters in Parkstadt Schwabing in Munich (Bavaria).](https://techcrunch.com/wp-content/uploads/2025/06/GettyImages-2217247219.jpg?w=562)
 
 In Brief 
 ### [Amazon’s new podcast strategy: Monetize everything](https://techcrunch.com/2026/04/26/amazons-new-podcast-strategy-monetize-everything/)
 
     *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 5 hours ago
+ 6 hours ago
 
 *   
-![Image 17: Apple CEO Tim Cook holds up a new iPhone 17 Pro](https://techcrunch.com/wp-content/uploads/2026/01/tim-cook-iphone-GettyImages-2234563479.jpg?w=537)
+![Image 18: Apple CEO Tim Cook holds up a new iPhone 17 Pro](https://techcrunch.com/wp-content/uploads/2026/01/tim-cook-iphone-GettyImages-2234563479.jpg?w=537)
 
 [Hardware](https://techcrunch.com/category/hardware/) 
 ### [What Tim Cook built](https://techcrunch.com/2026/04/26/what-tim-cook-built/)
 
     *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 6 hours ago
+ 7 hours ago
 
 *   
-![Image 18](https://techcrunch.com/wp-content/uploads/2026/01/elon-tesla-getty.jpg?w=563)
+![Image 19](https://techcrunch.com/wp-content/uploads/2026/01/elon-tesla-getty.jpg?w=563)
 
 [Transportation](https://techcrunch.com/category/transportation/) 
 ### [TechCrunch Mobility: Elon’s admission](https://techcrunch.com/2026/04/26/techcrunch-mobility-elons-admission/)
 
     *   [Kirsten Korosec](https://techcrunch.com/author/kirsten-korosec/)
 
- 10 hours ago
+ 11 hours ago
 
 *   
-![Image 19: AI sign displayed on a screen and Anthropic logo displayed on a phone screen are seen in this illustration photo.](https://techcrunch.com/wp-content/uploads/2026/01/GettyImages-2252871842.jpg?w=562)
+![Image 20: AI sign displayed on a screen and Anthropic logo displayed on a phone screen are seen in this illustration photo.](https://techcrunch.com/wp-content/uploads/2026/01/GettyImages-2252871842.jpg?w=562)
 
 In Brief 
 ### [To buy this Bay Area home, you’ll need Anthropic equity](https://techcrunch.com/2026/04/26/to-buy-this-bay-area-home-youll-need-anthropic-equity/)
 
     *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 11 hours ago
+ 12 hours ago
 
 *   
-![Image 20](https://techcrunch.com/wp-content/uploads/2026/04/SpeakOn-feat.jpg?w=668)
+![Image 21](https://techcrunch.com/wp-content/uploads/2026/04/SpeakOn-feat.jpg?w=668)
 
 [Hardware](https://techcrunch.com/category/hardware/) 
 ### [SpeakOn’s dictation device is a good idea marred by platform limitations](https://techcrunch.com/2026/04/26/speakons-dictation-device-is-a-good-idea-marred-by-platform-limitations/)
 
     *   [Ivan Mehta](https://techcrunch.com/author/ivan-mehta/)
 
- 11 hours ago
+ 13 hours ago
 
 *   
-![Image 21: AI, startups](https://techcrunch.com/wp-content/uploads/2023/08/GettyImages-88622588.jpg?w=517)
+![Image 22: AI, startups](https://techcrunch.com/wp-content/uploads/2023/08/GettyImages-88622588.jpg?w=517)
 
 In Brief 
 ### [Anthropic created a test marketplace for agent-on-agent commerce](https://techcrunch.com/2026/04/25/anthropic-created-a-test-marketplace-for-agent-on-agent-commerce/)
@@ -259,7 +269,7 @@ In Brief
  1 day ago
 
 *   
-![Image 22: Gas turbines are visible at an xAI data center on Riverport Rd in Memphis, TN on April 25, 2025.](https://techcrunch.com/wp-content/uploads/2025/06/GettyImages-2217198328.jpeg?w=563)
+![Image 23: Gas turbines are visible at an xAI data center on Riverport Rd in Memphis, TN on April 25, 2025.](https://techcrunch.com/wp-content/uploads/2025/06/GettyImages-2217198328.jpeg?w=563)
 
 In Brief 
 ### [Maine’s governor vetoes data center moratorium](https://techcrunch.com/2026/04/25/maines-governor-vetoes-data-center-moratorium/)
@@ -269,22 +279,12 @@ In Brief
  1 day ago
 
 *   
-![Image 23: Sam Altman, chief executive officer of OpenAI.](https://techcrunch.com/wp-content/uploads/2025/02/GettyImages-2194585161.jpg?w=562)
+![Image 24: Sam Altman, chief executive officer of OpenAI.](https://techcrunch.com/wp-content/uploads/2025/02/GettyImages-2194585161.jpg?w=562)
 
 [AI](https://techcrunch.com/category/artificial-intelligence/) 
 ### [OpenAI CEO apologizes to Tumbler Ridge community](https://techcrunch.com/2026/04/25/openai-ceo-apologizes-to-tumbler-ridge-community/)
 
     *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
-
- 1 day ago
-
-*   
-![Image 24: young man standing in front of the projection reflected stock market](https://techcrunch.com/wp-content/uploads/2025/02/GettyImages.jpg?w=563)
-
-[Climate](https://techcrunch.com/category/climate/) 
-### [The climate tech IPO window could finally be cracking open](https://techcrunch.com/2026/04/25/the-climate-tech-ipo-window-could-finally-be-cracking-open/)
-
-    *   [Tim De Chant](https://techcrunch.com/author/tim-de-chant/)
 
  1 day ago
 
@@ -417,7 +417,7 @@ In Brief
 
 *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 11 hours ago
+ 12 hours ago
 
 ![Image 33: AI, startups](https://techcrunch.com/wp-content/uploads/2023/08/GettyImages-88622588.jpg?w=517)
 
@@ -467,7 +467,7 @@ In Brief
 
 *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 11 hours ago
+ 12 hours ago
 
 ![Image 36](https://techcrunch.com/wp-content/uploads/2026/04/sushitech-3-hero.webp?w=539)
 
@@ -477,7 +477,7 @@ In Brief
 
 *   [Cindy Zackney](https://techcrunch.com/author/cindy-zackney/)
 
- 1 day ago
+ 2 days ago
 
 [Startups](https://techcrunch.com/category/startups/)
 
@@ -485,7 +485,7 @@ In Brief
 
 *   [Jagmeet Singh](https://techcrunch.com/author/jagmeet-singh/)
 
- 1 day ago
+ 2 days ago
 
 In Brief
 
@@ -654,7 +654,7 @@ More From:
 
 *   [Zack Whittaker](https://techcrunch.com/author/zack-whittaker/)
 
- 3 days ago
+ 4 days ago
 
 [Security](https://techcrunch.com/category/security/)
 
@@ -684,7 +684,7 @@ In Brief
 
 *   [Connie Loizos](https://techcrunch.com/author/connie-loizos/)
 
- 4 hours ago
+ 5 hours ago
 
 ![Image 53: AI sign displayed on a screen and Anthropic logo displayed on a phone screen are seen in this illustration photo.](https://techcrunch.com/wp-content/uploads/2026/01/GettyImages-2252871842.jpg?w=668)
 
@@ -694,7 +694,7 @@ In Brief
 
 *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 11 hours ago
+ 12 hours ago
 
 ![Image 54: Snabbit](https://techcrunch.com/wp-content/uploads/2025/05/snabbit.jpg?w=668)
 
@@ -704,7 +704,7 @@ In Brief
 
 *   [Jagmeet Singh](https://techcrunch.com/author/jagmeet-singh/)
 
- 1 day ago
+ 2 days ago
 
 ![Image 55: Microsoft CEO Steve Ballmer delivers the opening keynote address at TechEd 2004.](https://techcrunch.com/wp-content/uploads/2021/07/GettyImages-524085750.jpg?w=668)
 
@@ -762,7 +762,17 @@ In Brief
 
 [See More ![Image 60](https://techcrunch.com/wp-content/themes/tc-24/assets/svg/arrow-up-right.svg)](https://techcrunch.com/category/apps/)
 
-![Image 61: Apple CEO Tim Cook holds up a new iPhone 17 Pro](https://techcrunch.com/wp-content/uploads/2026/01/tim-cook-iphone-GettyImages-2234563479.jpg?w=668)
+![Image 61: Truecaller](https://techcrunch.com/wp-content/uploads/2026/04/truecaller.jpg?w=668)
+
+[Apps](https://techcrunch.com/category/apps/)
+
+### [Truecaller faces mounting pressures as its growth matures](https://techcrunch.com/2026/04/26/truecaller-faces-mounting-pressures-as-its-growth-matures/)
+
+*   [Jagmeet Singh](https://techcrunch.com/author/jagmeet-singh/)
+
+ 31 minutes ago
+
+![Image 62: Apple CEO Tim Cook holds up a new iPhone 17 Pro](https://techcrunch.com/wp-content/uploads/2026/01/tim-cook-iphone-GettyImages-2234563479.jpg?w=537)
 
 [Hardware](https://techcrunch.com/category/hardware/)
 
@@ -770,9 +780,7 @@ In Brief
 
 *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 6 hours ago
-
-![Image 62](https://techcrunch.com/wp-content/uploads/2026/03/GettyImages-2149461717.jpg?w=500)
+ 7 hours ago
 
 [Apps](https://techcrunch.com/category/apps/)
 
@@ -780,7 +788,7 @@ In Brief
 
 *   [Aisha Malik](https://techcrunch.com/author/aisha-malik/)
 
- 1 day ago
+ 2 days ago
 
 [Startups](https://techcrunch.com/category/startups/)
 
@@ -798,14 +806,6 @@ In Brief
 
  2 days ago
 
-In Brief
-
-### [Nothing introduces an AI-powered dictation tool](https://techcrunch.com/2026/04/24/nothing-introduces-an-ai-powered-dictation-tool/)
-
-*   [Ivan Mehta](https://techcrunch.com/author/ivan-mehta/)
-
- 3 days ago
-
 ## Transportation
 
 [See More ![Image 63](https://techcrunch.com/wp-content/themes/tc-24/assets/svg/arrow-up-right.svg)](https://techcrunch.com/category/transportation/)
@@ -818,7 +818,7 @@ In Brief
 
 *   [Kirsten Korosec](https://techcrunch.com/author/kirsten-korosec/)
 
- 10 hours ago
+ 11 hours ago
 
 ![Image 65: white Porsche coupe](https://techcrunch.com/wp-content/uploads/2026/04/porsche-coupe-white.jpg?w=562)
 
@@ -864,7 +864,7 @@ In Brief
 
     *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 5 hours ago
+ 6 hours ago
 
 *   
 ![Image 67: AI sign displayed on a screen and Anthropic logo displayed on a phone screen are seen in this illustration photo.](https://techcrunch.com/wp-content/uploads/2026/01/GettyImages-2252871842.jpg?w=562)
@@ -874,7 +874,7 @@ In Brief
 
     *   [Anthony Ha](https://techcrunch.com/author/anthony-ha/)
 
- 11 hours ago
+ 12 hours ago
 
 *   
 ![Image 68: AI, startups](https://techcrunch.com/wp-content/uploads/2023/08/GettyImages-88622588.jpg?w=517)
@@ -990,18 +990,6 @@ Each week, StrictlyVC’s host and TechCrunch Editor-in-Chief Connie Loizos, wit
 
 © 2026 TechCrunch Media LLC.
 
-![Image 77](https://pixel.wp.com/g.gif?v=ext&blog=136296444&post=0&tz=-7&srv=techcrunch.com&arch_home=1&hp=vip&j=1%3A15.5-beta&host=techcrunch.com&ref=&fcp=0&rand=0.47850288525017115)
+![Image 77](https://pixel.wp.com/g.gif?v=ext&blog=136296444&post=0&tz=-7&srv=techcrunch.com&arch_home=1&hp=vip&j=1%3A15.5-beta&host=techcrunch.com&ref=&fcp=412&rand=0.9433108086824185)
 
 Some areas of this page may shift around if you resize the browser window. Be sure to check heading and document order.
-
-Do Not Sell or Share My Personal Information
-
-![Image 78: Opt out of the sale or sharing of personal information](https://lh3.googleusercontent.com/IMEohADQGV4rcD4GVSCa8AGELftSBzGQZh475GedJEeCUyL0U3WWaybctrO-uB0HN9k3X4i5-fkJs9nZBh3Mz6flS52sL-IOME6DySPeIseyhjtQcOs=h60)
-
-# Opt out of the sale or sharing of personal information
-
-We won't sell or share your personal information to inform the ads you see. You may still see interest-based ads if your information is sold or shared by other companies or was sold or shared previously.
-
-Dismiss
-
-Opt out

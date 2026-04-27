@@ -129,6 +129,41 @@ const CHROME_LINE_PATTERNS: RegExp[] = [
   /^previous( story| article)$/i,
   /^story continues below$/i,
   /^advertisement$/i,
+  // v0.5.5 — non-English chrome from Le Monde / Der Spiegel / El País
+  // fixtures. Exact-line matches to minimize risk of dropping real
+  // non-English article content.
+  /^zum inhalt springen$/i,                         // de: skip to content
+  /^anmelden$/i,                                    // de: sign in
+  /^abonnement( abo)?$/i,                           // de: subscription
+  /^abo$/i,                                         // de: subscription short
+  /^einloggen$/i,                                   // de: log in
+  /^retour à la page d'accueil/i,                   // fr: back to home
+  /^menu menu$/i,                                   // doubled nav (le monde)
+  /^connexion$/i,                                   // fr: sign in
+  /^s'identifier$/i,                                // fr: sign in
+  /^s'inscrire$/i,                                  // fr: sign up
+  /^se connecter$/i,                                // fr: connect/sign in
+  /^iniciar sesión$/i,                              // es: sign in
+  /^suscribirse$/i,                                 // es: subscribe
+  /^suscribete$/i,                                  // es: subscribe
+  /^crear (una )?cuenta$/i,                         // es: create account
+  /^free browsing by accepting cookies$/i,
+  // v0.5.5 — recipe-site chrome
+  /^jump to recipe$/i,
+  /^print recipe$/i,
+  /^save recipe$/i,
+  /^rate (this )?recipe$/i,
+  /^add to (favorites|cookbook|grocery list)$/i,
+  /^cook(ing)? time$/i,
+  /^prep time$/i,
+  /^total time$/i,
+  /^servings$/i,
+  /^nutritional information$/i,
+  // v0.5.5 — 404-page boilerplate (still let "PAGE NOT FOUND" through
+  // so the user sees something; just drop the form-y body text)
+  /^sorry [-–—] we haven'?t been able to serve/i,
+  /^you may have followed an outdated link\b/i,
+  /^if you believe this to be an error\b/i,
 ]
 
 // Single-word lines that are almost always nav labels in news-site

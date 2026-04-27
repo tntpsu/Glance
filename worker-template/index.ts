@@ -51,10 +51,34 @@ function jsonResponse(status: number, body: unknown): Response {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    // v0.5.5: log every request so `wrangler tail` shows what's actually
+    // arriving (vs what the plugin claims it's sending). Catches the
+    // class of bug we hit on Cue where Cloudflare WAF or WebView mangled
+    // the method en route — debugging took hours without this.
+    // eslint-disable-next-line no-console
+    console.log(`[req] ${request.method} ${new URL(request.url).pathname} ua=${(request.headers.get('user-agent') ?? '').slice(0, 60)}`)
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() })
     }
     const url = new URL(request.url)
+    // v0.5.5: /healthz for monitoring + /diag echoes the request back so
+    // the plugin can verify what actually arrived at the worker.
+    if (url.pathname === '/healthz') {
+      return jsonResponse(200, { ok: true })
+    }
+    if (url.pathname === '/diag') {
+      const headerKeys: string[] = []
+      request.headers.forEach((_v, k) => headerKeys.push(k))
+      return jsonResponse(200, {
+        ok: true,
+        method: request.method,
+        url: request.url,
+        headers: headerKeys,
+        cfRay: request.headers.get('cf-ray') ?? null,
+        cfCountry: ((request as unknown as { cf?: { country?: string } }).cf)?.country ?? null,
+        ua: request.headers.get('user-agent'),
+      })
+    }
     if (url.pathname !== '/reader') {
       return jsonResponse(404, { ok: false, error: 'not found' })
     }
