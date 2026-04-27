@@ -6,7 +6,16 @@
 // once after connecting. Until then, all calls fall back to browser storage
 // so module-load-time imports don't crash.
 
+import { makeWriteSerializer } from './inflight'
 import type { ArticleBody, ReaderState, Source } from './types'
+
+// v0.5.6: cache writes go through a single chain so concurrent
+// putCachedBody calls can't race on the body-index read-modify-write
+// cycle. Without this, two simultaneous puts could each read the
+// 99-entry index, both push, both write back the 100-entry version,
+// and lose one entry's eviction work. The serializer makes B wait
+// for A to finish its full read-modify-write before starting.
+const serializeCacheWrite = makeWriteSerializer()
 
 interface BridgeStorageLike {
   getStorage: (key: string) => Promise<string>
@@ -253,14 +262,19 @@ export async function getCachedBody(url: string): Promise<ArticleBody | null> {
 }
 
 export async function putCachedBody(body: ArticleBody): Promise<void> {
-  await writeRaw(bodyKey(body.url), JSON.stringify(body))
-  // Update index, dedupe, evict oldest beyond cap.
-  const index = await readBodyIndex()
-  const filtered = index.filter(e => e.url !== body.url)
-  filtered.unshift({ url: body.url, fetchedAt: body.fetchedAt })
-  while (filtered.length > BODY_CACHE_CAP) {
-    const oldest = filtered.pop()
-    if (oldest) await writeRaw(bodyKey(oldest.url), '')
-  }
-  await writeBodyIndex(filtered)
+  // v0.5.6: serialize the entire body+index update so concurrent puts
+  // can't race on the read-modify-write of the body index. Body itself
+  // is keyed by URL (no race), but the index needs atomic R-M-W.
+  return serializeCacheWrite(async () => {
+    await writeRaw(bodyKey(body.url), JSON.stringify(body))
+    // Update index, dedupe, evict oldest beyond cap.
+    const index = await readBodyIndex()
+    const filtered = index.filter(e => e.url !== body.url)
+    filtered.unshift({ url: body.url, fetchedAt: body.fetchedAt })
+    while (filtered.length > BODY_CACHE_CAP) {
+      const oldest = filtered.pop()
+      if (oldest) await writeRaw(bodyKey(oldest.url), '')
+    }
+    await writeBodyIndex(filtered)
+  })
 }

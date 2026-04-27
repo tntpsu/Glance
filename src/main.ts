@@ -10,6 +10,7 @@ import { ESPN_LEAGUES } from './adapters/espn'
 import { addInboxItem, setInboxBridge } from './adapters/inbox'
 import { getAdapter } from './adapters/index'
 import { setDefaultWorkerCache } from './adapters/jina'
+import { makeGenerationCounter } from './inflight'
 import { connectEvenRuntime, type EvenRuntime, type InputSource } from './even'
 import { JinaError, setJinaApiKeyCache, setJinaLogger, type JinaFetchLog } from './jina'
 import { paginate } from './paginate'
@@ -921,7 +922,15 @@ async function tryConsumePendingOpen(): Promise<boolean> {
   return true
 }
 
+// v0.5.6: generation counter for openArticle. A slow fetch from article
+// A must NOT apply its body to currentArticle if the user has navigated
+// elsewhere (back to articles list, or to a different article B). Each
+// openArticle invocation captures a generation; the resolver checks it
+// before mutating shared state.
+const articleGen = makeGenerationCounter()
+
 async function openArticle(article: Article): Promise<void> {
+  const myGen = articleGen.next()
   currentArticle = article
   currentPages = []
   currentPageIndex = 0
@@ -962,11 +971,18 @@ async function openArticle(article: Article): Promise<void> {
         })
       }
     }
+    // v0.5.6: stale-resolution check. If the user navigated away (and
+    // articleGen advanced past myGen), the in-flight fetch we just
+    // resolved is for an article that's no longer on screen. Drop the
+    // result silently — the cache write above already happened (good,
+    // future taps benefit), but don't mutate UI state.
+    if (myGen !== articleGen.current()) return
     currentArticle = { url: article.url, title }
     currentPages = paginateForMode(body)
     currentPageIndex = 0
     await paint()
   } catch (err) {
+    if (myGen !== articleGen.current()) return
     const message = err instanceof JinaError ? err.message : err instanceof Error ? err.message : String(err)
     await paint(false, message)
   }
