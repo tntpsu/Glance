@@ -50,6 +50,72 @@ describe('isPageChrome', () => {
     expect(isPageChrome('Yes.')).toBe(false)
     expect(isPageChrome('Indeed.')).toBe(false)
   })
+
+  // ─── v0.5.2 round 2 — caught by real-world test against CNN article ───
+  it('drops bullet-prefixed nav (BBC menu items)', () => {
+    expect(isPageChrome('• Home')).toBe(true)
+    expect(isPageChrome('• News')).toBe(true)
+    expect(isPageChrome('• Sport')).toBe(true)
+    expect(isPageChrome('• Technology')).toBe(true)
+    expect(isPageChrome('- Politics')).toBe(true)
+    expect(isPageChrome('* Business')).toBe(true)
+  })
+  it('drops numbered form prompts (CNN ad-feedback)', () => {
+    expect(isPageChrome('1. How relevant is this ad to you?')).toBe(true)
+    expect(isPageChrome('2. Did you encounter any technical issues?')).toBe(true)
+    expect(isPageChrome('3. How was the ad placement?')).toBe(true)
+  })
+  it('drops empty-text markdown anchor lines', () => {
+    expect(isPageChrome('[](https://www.bbc.com/)')).toBe(true)
+    // CNN had two concatenated logos on one line
+    expect(isPageChrome('[](https://www.cnn.com/ "CNN logo")[](https://www.cnn.com/travel)')).toBe(true)
+  })
+  it('drops empty bullet lines (orphan list markers)', () => {
+    expect(isPageChrome('•')).toBe(true)
+    expect(isPageChrome('•   ')).toBe(true)
+    expect(isPageChrome('-')).toBe(true)
+    expect(isPageChrome('+')).toBe(true)
+  })
+  it('drops checkbox-form mega-lines (multi [x] markers)', () => {
+    expect(isPageChrome('Video player was slow - [x] Video never loaded - [x] Ad froze - [x] Other')).toBe(true)
+    expect(isPageChrome('[x] Yes [x] No')).toBe(true)
+    // Single [x] in real content (e.g. code) should NOT trigger
+    expect(isPageChrome('She marked [x] then walked away.')).toBe(false)
+  })
+  it('drops post-form thank-you blurbs', () => {
+    expect(isPageChrome('Thank You!')).toBe(true)
+    expect(isPageChrome('thank you')).toBe(true)
+    expect(isPageChrome('Your effort and contribution in providing this feedback is much appreciated.')).toBe(true)
+  })
+  it('drops social-follow + app-download CTAs', () => {
+    expect(isPageChrome('Follow CNN Travel')).toBe(true)
+    expect(isPageChrome('Follow BBC News')).toBe(true)
+    expect(isPageChrome('Download the CNN App')).toBe(true)
+    expect(isPageChrome('Download the New York Times App')).toBe(true)
+  })
+  it('drops account-prompt lines', () => {
+    expect(isPageChrome('Your CNN account')).toBe(true)
+    expect(isPageChrome('Sign in to your CNN account')).toBe(true)
+    expect(isPageChrome('My account')).toBe(true)
+  })
+  it('drops section pivots / "trending" topic chips', () => {
+    expect(isPageChrome('Trending Iran')).toBe(true)
+    expect(isPageChrome('Trending Kentucky Derby')).toBe(true)
+    expect(isPageChrome('Stories for you')).toBe(true)
+    expect(isPageChrome('Streaming Now')).toBe(true)
+    expect(isPageChrome('CNN Underscored Mother\'s Day gifts')).toBe(true)
+    expect(isPageChrome('More top stories')).toBe(true)
+  })
+  it('preserves real article content with similar shape', () => {
+    // These look chrome-shaped at a glance but are real prose
+    expect(isPageChrome('Iran said Monday that talks would resume.')).toBe(false)
+    expect(isPageChrome('She said: "Please follow up next week."')).toBe(false)
+    // Legitimate "1. X" enumerations in articles — note these slip
+    // through filter (we strip "1. " before pattern check) but the
+    // content "There are three reasons" is clearly real, not a form
+    // prompt. Acceptable trade-off — form prompts are short/template-y.
+    expect(isPageChrome('1. There are three main reasons this happened.')).toBe(false)
+  })
 })
 
 describe('paginate strips page chrome end-to-end', () => {

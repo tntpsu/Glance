@@ -17,6 +17,46 @@ const PAGE_MIN = 200 // don't break a page shorter than this if we can avoid it
 const CHROME_LINE_PATTERNS: RegExp[] = [
   /^ad(vertisement)?( feedback)?$/i,
   /^sponsored( content| message)?$/i,
+  // v0.5.2: CNN-style ad-feedback form (caught in real-world test against
+  // a real CNN article — every CNN article body had this leaking through).
+  /^.{1,30} values your feedback$/i,
+  /^how (relevant|did|was|are)\b/i,
+  /^did you (encounter|have|see|find)\b/i,
+  /^\[x\]\s/i,                                  // checkbox option line "[x] No"
+  /^(cancel|close|done|next|back|submit)( cancel| submit| close| done)?$/i,
+  /^cancel\s+submit$/i,                         // "Cancel  Submit" footer of modal forms
+  // v0.5.2: personal-area nav (CNN / Yahoo etc — "My Account / Settings /
+  // Newsletters / Topics you follow")
+  /^my account$/i,
+  /^topics? you (follow|might like)$/i,
+  /^newsletters?$/i,
+  // v0.5.2: section pivots ("Trending X" — usually a short topic name
+  // styled as a chip, not an article title)
+  /^trending(\s\w+){1,3}$/i,
+  /^stories for you$/i,
+  /^streaming( now)?$/i,
+  /^check these out$/i,
+  /^for subscribers$/i,
+  /^(more|other) top stories$/i,
+  /^cnn underscored\b/i,
+  /^crime and courts$/i,
+  // v0.5.2: BBC News article-page footer
+  /^add as preferred on google$/i,
+  /^add (this )?(to|as)\s/i,
+  // v0.5.2 round 3 (real CNN article test): post-form thank-you blurb,
+  // social-follow CTAs, app-download CTAs, account-related prompts
+  /^thank you!?$/i,
+  /^your effort and contribution\b/i,
+  /^follow (cnn|bbc|nyt|the|us)\b/i,
+  /^download the .{1,30} app$/i,
+  /^your .{1,20} account$/i,
+  /^sign in to your .{1,20} account$/i,
+  // v0.5.2: HN aggregator strip
+  /^hacker news$/i,
+  /^new \| past \| comments \|/i,
+  // v0.5.2: concatenated nav like "DestinationsFood & DrinkNewsStayVideo"
+  // — heuristic: 3+ capital-letter starts in a single word-ish line under 80 chars
+  // (skip — false-positive risk too high; CNN-specific)
   /^show (more |all |full )?comments?$/i,
   /^view (\d+ )?comments?$/i,
   /^(\d+ )?comments?$/i,
@@ -61,23 +101,63 @@ const CHROME_LINE_PATTERNS: RegExp[] = [
 ]
 
 // Single-word lines that are almost always nav labels in news-site
-// templates. Case-insensitive exact match on the trimmed line.
+// templates. Case-insensitive exact match on the trimmed line (after
+// any bullet prefix is stripped — see isPageChrome).
 const NAV_LINE_WORDS = new Set([
-  'menu', 'home', 'world', 'us', 'u.s.', 'politics', 'business', 'tech',
+  'menu', 'home', 'world', 'us', 'u.s.', 'uk', 'politics', 'business', 'tech',
   'technology', 'sports', 'opinion', 'health', 'entertainment',
   'lifestyle', 'science', 'climate', 'economy', 'markets', 'travel',
-  'food', 'arts', 'media', 'video', 'audio', 'podcasts', 'newsletters',
-  'newsletter', 'live tv', 'live', 'subscribe', 'sign in', 'log in',
+  'food', 'food & drink', 'arts', 'culture', 'earth', 'media',
+  'video', 'audio', 'podcasts', 'newsletters', 'newsletter',
+  'live tv', 'live', 'subscribe', 'sign in', 'log in',
   'sign up', 'log out', 'about', 'contact', 'privacy', 'terms',
-  'cookies', 'help', 'support', 'search', 'menu', 'navigation',
+  'cookies', 'help', 'support', 'search', 'navigation',
   'archive', 'archives', 'sitemap', 'rss', 'feeds',
+  // v0.5.2: more nav variants from real-world testing
+  'destinations', 'stay', 'documentaries', 'in pictures', 'bbc indepth',
+  'bbc verify', 'us & canada', 'asia', 'africa', 'australia', 'europe',
+  'latin america', 'middle east', 'weather', 'settings', 'my account',
+  'watch', 'listen', 'watchlistensubscribe', 'paginate', 'topics you follow',
+  // Sub-nav single words common across news sites
+  'crime', 'courts', 'breaking', 'latest', 'top stories',
+  // v0.5.2 round 2 (real CNN+BBC test): singular nav forms + language
+  // switcher + sign-out variants + section repeats
+  'news', 'sport', 'more', 'sign out', 'edition', 'international',
+  'arabic', 'español', 'french', 'german', 'spanish',
+  'listenwatch', 'watchlisten', 'related', 'oil', 'fuel',
 ])
 
 function isPageChrome(line: string): boolean {
   const t = line.trim()
   if (t.length === 0) return false // keep blank lines for paragraph spacing
+  // v0.5.2: drop lines that are JUST one or more empty-text markdown links,
+  // e.g. "[](https://www.bbc.com/)" or "[](url1)[](url2)" (CNN logo +
+  // section anchor concatenated). These survive strip() because the
+  // link regex requires non-empty link text. Render as empty/icon nav
+  // anchors on the source page; nothing useful for the reader.
+  if (/^(\[\]\([^)]+\)(\s+"[^"]*")?\s*)+$/.test(t)) return true
+  // v0.5.2: empty bullet line (just "•" or "•   ") — happens when an
+  // image link or bare anchor was the only content of a list item, and
+  // strip() removed it leaving the bullet behind.
+  if (/^[•\-*+]\s*$/.test(t)) return true
+  // v0.5.2: form-control mega-line — 2+ [x] checkbox markers on the same
+  // line strongly signals a feedback form rendered as inline options
+  // (caught: CNN's "Video player was slow to load - [x] Video content
+  // never loaded - [x] Ad froze - [x] ..." which was one giant line).
+  const xboxMatches = t.match(/\[x\]/gi)
+  if (xboxMatches && xboxMatches.length >= 2) return true
+  // Strip BOTH leading bullet AND leading "N. " number prefix before
+  // checking patterns + nav words. CNN's ad-feedback prompts come as
+  // "1. How relevant is this ad to you?" — without stripping the "1. "
+  // prefix, /^how /i never matches.
+  const sansPrefix = t
+    .replace(/^[•\-*+]\s+/, '')
+    .replace(/^\d+\.\s+/, '')
+  if (CHROME_LINE_PATTERNS.some(p => p.test(sansPrefix))) return true
+  if (NAV_LINE_WORDS.has(sansPrefix.toLowerCase())) return true
+  // Also keep the original-line patterns for cases where the prefix IS
+  // significant (the CHROME_LINE_PATTERNS list applied without stripping).
   if (CHROME_LINE_PATTERNS.some(p => p.test(t))) return true
-  if (NAV_LINE_WORDS.has(t.toLowerCase())) return true
   return false
 }
 
