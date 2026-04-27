@@ -20,7 +20,11 @@
 // than any single user will hit.
 
 import { Readability } from '@mozilla/readability'
-import { JSDOM } from 'jsdom'
+import { parseHTML } from 'linkedom'
+// Swap from jsdom to linkedom (v0.5.5 deploy fix). jsdom pulls node
+// built-ins (path/fs/url/etc) that don't exist in Cloudflare Workers
+// even with nodejs_compat — linkedom is a pure-JS DOM impl that works
+// in Workers natively. Readability accepts any Document-shaped object.
 
 interface Env {
   SHARED_SECRET: string
@@ -135,8 +139,10 @@ export default {
     let title: string
     let body: string
     try {
-      const dom = new JSDOM(html, { url: target })
-      const reader = new Readability(dom.window.document)
+      const { document } = parseHTML(html)
+      // Readability needs a baseURI; linkedom's document doesn't auto-set
+      // it, so set it via a base element if Readability needs absolute URLs.
+      const reader = new Readability(document as unknown as Document)
       const parsed = reader.parse()
       if (!parsed) {
         return jsonResponse(500, { ok: false, error: 'extraction returned nothing' })
