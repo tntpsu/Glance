@@ -33,8 +33,6 @@ const FIXTURES = [
   { name: 'bbc',       url: 'https://www.bbc.com/news/articles/c15d57pv925o' },
   { name: 'hn-medium', url: 'https://ca98am79.medium.com/i-bought-friendster-for-30k-heres-what-i-m-doing-wit' },
   { name: 'yahoo',     url: 'https://news.yahoo.com/' },
-  // guardian removed — article-URL was 404; refresh with a current
-  // article URL from theguardian.com when re-running this script.
   { name: 'reuters',   url: 'https://www.reuters.com/world/' },
   { name: 'npr',       url: 'https://www.npr.org/sections/news/' },
   { name: 'techcrunch',url: 'https://techcrunch.com/' },
@@ -42,6 +40,15 @@ const FIXTURES = [
   { name: 'arstechnica',url:'https://arstechnica.com/' },
   { name: 'wikipedia', url: 'https://en.wikipedia.org/wiki/Cloudflare' },
   { name: 'substack',  url: 'https://stratechery.com/' },
+  // v0.5.4 round 2 — coverage for structurally-different chrome patterns
+  // and one user-specific site (on3 college sports).
+  { name: 'guardian',  url: 'https://www.theguardian.com/international' },
+  { name: 'reddit',    url: 'https://www.reddit.com/r/programming/' },
+  { name: 'nyt',       url: 'https://www.nytimes.com/section/world' },
+  { name: 'stackoverflow', url: 'https://stackoverflow.com/questions/231767/what-does-the-yield-keyword-do-in-python' },
+  { name: 'nyt-cooking', url: 'https://cooking.nytimes.com/' },
+  { name: 'github',    url: 'https://github.com/microsoft/vscode' },
+  { name: 'on3',       url: 'https://www.on3.com/teams/penn-state-nittany-lions/' },
 ]
 
 async function fetchOnce(url) {

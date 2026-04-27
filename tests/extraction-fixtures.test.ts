@@ -46,6 +46,13 @@ const REGRESSION_GUARDS: Array<{ name: string; re: RegExp }> = [
   { name: 'download app CTA',           re: /^Download the .{1,30} App$/im },
   { name: 'orphan bullet line',         re: /^[•\-*+]\s*$/m },
   { name: 'thank-you blurb',            re: /^Thank You!?$/im },
+  // v0.5.4 — caught by adding the 7 new structural fixtures
+  { name: 'cookie/privacy notice',      re: /^This site uses cookies/im },
+  { name: 'privacy choices header',     re: /^Your Privacy Choices$/im },
+  { name: 'do-not-sell footer',         re: /^Do Not Sell or Share My Personal Information$/im },
+  { name: 'SKIP ADVERTISEMENT',         re: /^SKIP ADVERTISEMENT$/m },
+  { name: 'Today\'s Paper masthead',    re: /^Today'?s Paper$/im },
+  { name: 'Toggle navigation',          re: /^Toggle navigation$/im },
 ]
 
 // Each fixture has at least one snippet that must survive the filter —
@@ -65,6 +72,14 @@ const POSITIVE_SNIPPETS: Record<string, string[]> = {
   arstechnica:['Ars'],
   wikipedia:  ['Cloudflare'],
   substack:   ['Stratechery'],
+  // v0.5.4 round 2 — new structural-coverage fixtures
+  guardian:   ['Trump'],  // homepage of Guardian International
+  reddit:     ['blocked'],  // 403 page — site blocks r.jina.ai (real case)
+  nyt:        ['World'],
+  stackoverflow: ['yield', 'Python'],  // Q&A: classic yield keyword question
+  'nyt-cooking': ['Recipes'],
+  github:     ['vscode'],
+  on3:        ['Penn State'],  // user's site — college sports recruiting
 }
 
 function listFixtures(): Array<{ name: string; path: string }> {

@@ -51,6 +51,37 @@ const CHROME_LINE_PATTERNS: RegExp[] = [
   /^download the .{1,30} app$/i,
   /^your .{1,20} account$/i,
   /^sign in to your .{1,20} account$/i,
+  // v0.5.4 (real-world test on NYT / on3 / GitHub fixtures): cookie /
+  // privacy notice patterns — universal across modern web. Long form
+  // since the actual paragraph wording varies; anchor on stable phrases.
+  /^your privacy choices$/i,
+  /^this site uses cookies\b/i,
+  /^we use cookies\b/i,
+  /^privacy choice$/i,
+  /^manage (your )?(privacy|cookie)\b/i,
+  /^cookie (settings|preferences|notice|policy)$/i,
+  /^accept (all )?cookies?$/i,
+  /^reject (all )?cookies?$/i,
+  /^by using our (site|website)\b/i,
+  /^we won'?t sell or share your personal information\b/i,
+  /^do not sell or share my personal information$/i,
+  /^opt out( of)?\b/i,
+  /^dismiss$/i,
+  // v0.5.4: skip-link variants (Section 508 / a11y) — `Skip to content`
+  // already in CHROME_LINE_PATTERNS but variants weren't.
+  /^skip to (site index|navigation|nav|main|top|footer)$/i,
+  /^jump to (content|navigation|main)$/i,
+  // v0.5.4: ad-attribution chrome
+  /^skip advertisement$/i,
+  /^supported by$/i,
+  /^paid (post|content)$/i,
+  /^paid for by\b/i,
+  // v0.5.4: masthead chrome (NYT-style)
+  /^today'?s paper$/i,
+  // v0.5.4: nav-menu trigger labels (GitHub / NYT)
+  /^toggle navigation$/i,
+  /^navigation menu$/i,
+  /^appearance settings$/i,
   // v0.5.2: HN aggregator strip
   /^hacker news$/i,
   /^new \| past \| comments \|/i,
