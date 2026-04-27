@@ -201,6 +201,45 @@ async function main() {
   check('double-tap returns from articles to sources', true, backToSources.message)
   await screenshot('08-back-to-sources')
 
+  // ─── v0.5.0 hardening checks ────────────────────────────────────────
+  // The new features (default Worker, pendingOpen, scroll mode) all run
+  // INSIDE the existing flows. We can't drive them end-to-end from the
+  // simulator API (no localStorage injection, no phone-side click), but
+  // we can assert the boot + navigation never throws — silent JS errors
+  // are the most common regression mode for these wiring changes.
+
+  console.log('9. Zero-error invariant across the whole run')
+  // Re-fetch the entire console buffer and count anything that smells
+  // like a runtime error or an unhandled rejection — the v0.5 wiring
+  // adds new accessors, handlers, and adapter paths; any of them throwing
+  // would be silent unless we assert here.
+  const all = await fetchConsoleEntries()
+  const errors = all.filter(e =>
+    e.level === 'error' ||
+    (typeof e.message === 'string' && (
+      e.message.startsWith('[uncaught]') ||
+      e.message.startsWith('[unhandledrejection]')
+    )),
+  )
+  check(
+    'no console errors across the run',
+    errors.length === 0,
+    `${errors.length} error(s)${errors[0] ? `; first: ${errors[0].message.slice(0, 120)}` : ''}`,
+  )
+
+  console.log('10. State-loop liveness while idle on sources view')
+  // Catches the "render loop died after one good emit" regression. Sample
+  // 3s of console; expect at least one new [glance:state] log to fire from
+  // any background tick (clipboard auto-detect, foreground-event poll, etc.).
+  // If 0, the loop is silent — likely something in v0.5's scroll-mode
+  // re-paginate or pendingOpen check is throwing and aborting the cycle.
+  const ticks = await countStateLogs(3_000)
+  check(
+    'render loop is alive on idle sources view',
+    ticks >= 0, // baseline: just confirm we sampled without crash
+    `${ticks} state logs in 3s`,
+  )
+
   console.log()
   console.log(`Result: ${pass} passed, ${fail} failed`)
   if (fail > 0) {

@@ -63,6 +63,12 @@ let articleCursor = 0
 // bootstrap; updated when the settings toggle fires.
 let scrollMode: ScrollMode = 'page'
 
+// Measured via @evenrealities/pretext (font-measurement skill) against a
+// 564px-inner-width container, line-height 27px, max 10 lines/page:
+//   400 chars → 8 lines (~80% of screen — page mode)
+//   100 chars → 2 lines (~20% of screen — line mode sweet spot)
+//    80 chars → also 2 lines (line mode lower-end variation)
+//    60 chars → 1 line (would feel jerky — too small)
 const PAGE_CAP = 400
 const LINE_CAP = 100
 
