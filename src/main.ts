@@ -11,7 +11,7 @@ import { addInboxItem, setInboxBridge } from './adapters/inbox'
 import { getAdapter } from './adapters/index'
 import { setDefaultWorkerCache } from './adapters/jina'
 import { connectEvenRuntime, type EvenRuntime, type InputSource } from './even'
-import { JinaError, setJinaApiKeyCache } from './jina'
+import { JinaError, setJinaApiKeyCache, setJinaLogger, type JinaFetchLog } from './jina'
 import { paginate } from './paginate'
 import { DEFAULT_SOURCES, looksLikeUrl, makeSource } from './sources'
 import {
@@ -74,6 +74,51 @@ const LINE_CAP = 100
 
 function paginateForMode(body: string): string[] {
   return paginate(body, scrollMode === 'line' ? LINE_CAP : PAGE_CAP)
+}
+
+// Phone-side fetch debug log. Kept in-memory only — refreshing the page
+// clears it. Capped so a long session doesn't grow unbounded.
+const FETCH_LOG_CAP = 50
+const fetchLog: JinaFetchLog[] = []
+function pushFetchLog(entry: JinaFetchLog): void {
+  fetchLog.unshift(entry)
+  if (fetchLog.length > FETCH_LOG_CAP) fetchLog.length = FETCH_LOG_CAP
+  renderFetchLog()
+}
+
+function fmtAgo(ts: number): string {
+  const sec = Math.round((Date.now() - ts) / 1000)
+  if (sec < 60) return `${sec}s ago`
+  if (sec < 3600) return `${Math.round(sec / 60)}m ago`
+  return `${Math.round(sec / 3600)}h ago`
+}
+
+function renderFetchLog(): void {
+  if (!fetchLogEl) return
+  if (fetchLog.length === 0) {
+    fetchLogEl.innerHTML = '<div style="color: #7b7b7b;">No fetches yet — try opening a source on the glasses.</div>'
+    return
+  }
+  fetchLogEl.innerHTML = fetchLog
+    .map(e => {
+      const statusBadge = e.ok
+        ? `<span style="color: #2a2;">${e.status ?? '?'}</span>`
+        : `<span style="color: #c00;">${e.status ?? 'NET'}</span>`
+      const ms = `${e.ms}ms`
+      const bytes = e.bytes !== undefined ? ` ${(e.bytes / 1024).toFixed(1)}KB` : ''
+      const err = e.error ? `<div style="color: #c00; margin-top: .15rem;">↳ ${escapeHtml(e.error)}</div>` : ''
+      const url = e.url.length > 70 ? `${e.url.slice(0, 67)}…` : e.url
+      return `<div style="padding: .35rem 0; border-bottom: 1px solid #f0f0f0;">
+        <div style="display: flex; gap: .5rem; align-items: center;">
+          <span style="color: #999; min-width: 6em;">${fmtAgo(e.ts)}</span>
+          ${statusBadge}
+          <span style="color: #555;">${ms}${bytes}</span>
+        </div>
+        <div style="color: #232323; word-break: break-all;">${escapeHtml(url)}</div>
+        ${err}
+      </div>`
+    })
+    .join('')
 }
 
 // Sliding-window size for both list views — fits the right-column with
@@ -216,6 +261,22 @@ root.innerHTML = `
           </div>
           <p id="jina-key-status" style="color: #2a2; margin: .25rem 0 0 0; font-size: .85em; min-height: 1.2em;"></p>
         </form>
+      </details>
+    </section>
+
+    <section style="margin-top: 2rem;">
+      <details>
+        <summary style="cursor: pointer; color: #232323;">Recent fetches (debug)</summary>
+        <p style="color: #7b7b7b; margin: .5rem 0; font-size: .85em; max-width: 520px;">
+          Last 50 article-body / homepage fetches with status, latency, and any error
+          message. Use this to figure out why a source is misbehaving — 451 = legal
+          block, 403 = bot wall, 429 = rate limited, timeout = r.jina.ai cold start.
+        </p>
+        <div style="display: flex; gap: .5rem; margin-bottom: .5rem;">
+          <button id="fetch-log-clear" type="button" style="padding: .35rem .7rem; cursor: pointer; background: #eee;">Clear</button>
+          <button id="fetch-log-refresh" type="button" style="padding: .35rem .7rem; cursor: pointer; background: #eee;">Refresh</button>
+        </div>
+        <div id="fetch-log" style="max-width: 720px; max-height: 320px; overflow-y: auto; font-family: ui-monospace, monospace; font-size: .8em; border: 1px solid #ddd; padding: .5rem;"></div>
       </details>
     </section>
 
@@ -396,6 +457,15 @@ const defaultWorkerTokenInput = document.querySelector<HTMLInputElement>('#defau
 const defaultWorkerClearBtn = document.querySelector<HTMLButtonElement>('#default-worker-clear')!
 const defaultWorkerStatus = document.querySelector<HTMLParagraphElement>('#default-worker-status')!
 const scrollModeStatus = document.querySelector<HTMLParagraphElement>('#scroll-mode-status')!
+const fetchLogEl = document.querySelector<HTMLDivElement>('#fetch-log')!
+const fetchLogClearBtn = document.querySelector<HTMLButtonElement>('#fetch-log-clear')!
+const fetchLogRefreshBtn = document.querySelector<HTMLButtonElement>('#fetch-log-refresh')!
+
+fetchLogClearBtn.addEventListener('click', () => {
+  fetchLog.length = 0
+  renderFetchLog()
+})
+fetchLogRefreshBtn.addEventListener('click', () => renderFetchLog())
 
 async function addInboxFromForm(url: string, title: string): Promise<void> {
   if (!looksLikeUrl(url)) {
@@ -1025,6 +1095,12 @@ async function bootstrap(): Promise<void> {
     setStorageBridge(bridge)
     setInboxBridge(bridge)
   }
+
+  // Wire the jina fetch logger so the phone-side debug panel sees every
+  // r.jina.ai call (success + failure). Independent of bridge — works in
+  // browser preview too.
+  setJinaLogger(pushFetchLog)
+  renderFetchLog()
 
   // Hydrate Jina API key (if previously set) into the runtime cache so
   // fetchViaJina sees it on first call. Also seed the settings input.

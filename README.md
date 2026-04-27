@@ -8,7 +8,7 @@ App icon: `assets/icon.svg` (master) and `assets/icon.png` (1024×1024 export). 
 
 Three-layer navigation: pick a saved site → see its current article list → tap a headline to read the body, paginated. Most extraction happens via [`r.jina.ai`](https://jina.ai/reader/) (free public URL-to-markdown service). Adapter pattern lets specific sites use better paths — ESPN uses its public news API to bypass the bot wall.
 
-## Status: v0.5.0 (default Worker, Browse-now, line-by-line scroll)
+## Status: v0.5.1 (page-chrome filter, friendlier errors, on-phone fetch debug log)
 
 v0.5.0 differentiates against the third-party "ER Browser" app (~3K downloads on the
 Hub) on three axes:
