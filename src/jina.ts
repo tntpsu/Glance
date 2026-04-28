@@ -60,9 +60,13 @@ export function setJinaLogger(sink: ((entry: JinaFetchLog) => void) | null): voi
 
 // Translate a non-2xx HTTP status into a user-readable explanation.
 // 451 (Unavailable for Legal Reasons) is what r.jina.ai surfaces when
-// the upstream blocks them on copyright / geo / DMCA grounds.
+// the upstream blocks them. Confirmed in the wild for two distinct
+// reasons: (a) actual legal/region blocks, (b) "DDoS suspected" when
+// jina's anonymous IP pool gets rate-limited (e.g., yahoo.com 24h ban).
+// In both cases the workaround is the same: set a Jina API key (exits
+// the shared IP pool) or configure a default Worker (skips jina).
 function explainHttpStatus(status: number): string {
-  if (status === 451) return 'r.jina.ai cannot serve this article (legal block — copyright or region).'
+  if (status === 451) return 'r.jina.ai blocked by upstream (legal/region OR rate-limit). Set a Jina API key in settings — or configure your default Worker — to bypass.'
   if (status === 403) return 'r.jina.ai was blocked by the site (bot wall / Cloudflare).'
   if (status === 429) return 'r.jina.ai rate-limited this fetch. Try again in a minute, or set your Jina API key in settings to lift the limit.'
   if (status === 422) return 'r.jina.ai cannot extract this URL (probably a non-article page or malformed link).'
